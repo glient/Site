@@ -1,0 +1,2203 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PodDrop — симулятор вейпов</title>
+<style>
+  :root{
+    --bg:#0a0612;--panel:#14101f;--panel2:#1a1428;--border:#2a2140;--border2:#3a2f55;
+    --txt:#f4f0ff;--dim:#8b7fb0;--dim2:#5e5580;
+    --accent:#a855f7;--accent2:#c084fc;--gold:#fb923c;--gold2:#fdba74;--red:#f43f5e;--green:#4ade80;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;
+    background:var(--bg);color:var(--txt);font-size:14px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;min-height:100vh;padding-bottom:80px;
+    background-image:radial-gradient(ellipse 70% 40% at 50% 0%,rgba(168,85,247,.1),transparent);
+    overflow-x:hidden}
+  button{font-family:inherit;-webkit-tap-highlight-color:transparent}
+
+  /* HEADER */
+  header{display:flex;align-items:center;gap:12px;padding:0 16px;height:60px;
+    background:rgba(10,6,18,.85);backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--border);position:sticky;top:0;z-index:60}
+  .logo{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+  .logo-mark{width:32px;height:32px;border-radius:10px;
+    background:linear-gradient(135deg,#a855f7 0%,#ec4899 50%,#fb923c 100%);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 24px rgba(168,85,247,.55);animation:logoPulse 3s ease-in-out infinite}
+  @keyframes logoPulse{0%,100%{box-shadow:0 0 24px rgba(168,85,247,.55)}
+    50%{box-shadow:0 0 32px rgba(168,85,247,.75)}}
+  .logo-mark svg{width:18px;height:18px}
+  .logo-text{display:flex;flex-direction:column;line-height:1;gap:2px}
+  .logo-main{font-size:17px;font-weight:900;letter-spacing:-.5px;
+    background:linear-gradient(90deg,#c084fc 0%,#ec4899 55%,#fb923c 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .logo-sub{font-size:8.5px;font-weight:800;letter-spacing:2px;text-transform:uppercase;
+    color:var(--dim);opacity:.85}
+  .user-area{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .lvl-wrap{display:flex;flex-direction:column;gap:3px;min-width:90px}
+  .lvl-top{display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--dim)}
+  .lvl-top b{color:var(--accent2)}
+  .lvl-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+  .lvl-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .6s}
+  .bal{display:flex;align-items:center;gap:6px;background:var(--panel);
+    border:1px solid var(--border2);padding:6px 11px;border-radius:9px;
+    font-weight:800;font-size:13.5px;font-variant-numeric:tabular-nums}
+  .curr{display:inline-flex;align-items:center;gap:5px;font-weight:900;color:var(--gold)}
+  .curr::before{content:'П';display:inline-flex;align-items:center;justify-content:center;
+    width:16px;height:16px;border-radius:50%;flex:0 0 auto;
+    background:radial-gradient(circle at 30% 30%,#fed7aa,var(--gold) 60%,#c2410c);
+    color:#451a03;font-size:10px;font-weight:900;box-shadow:0 0 8px rgba(251,146,60,.5)}
+
+  main{max-width:1200px;margin:0 auto;padding:20px 16px 40px}
+  .view{display:none}
+  .view.active{display:block;animation:fade .2s}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  h2{font-size:15px;font-weight:700;margin-bottom:14px;letter-spacing:-.2px}
+  h2 small{font-size:12px;color:var(--dim);font-weight:500;margin-left:8px}
+
+  /* CASES */
+  .cases{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+  .case{background:var(--panel);border:1px solid var(--border);border-radius:14px;
+    padding:12px 10px;text-align:center;transition:.2s;position:relative;overflow:hidden;cursor:pointer}
+  .case:hover{border-color:var(--border2);transform:translateY(-3px);background:var(--panel2);
+    box-shadow:0 10px 30px rgba(168,85,247,.15)}
+  .case:active{transform:scale(.98)}
+  .case canvas{display:block;margin:0 auto 8px;transition:transform .3s}
+  .case:hover canvas{transform:scale(1.08)}
+  .case h3{font-size:12.5px;font-weight:700;margin-bottom:2px;line-height:1.2}
+  .case .sub{font-size:10px;color:var(--dim);margin-bottom:9px;line-height:1.3}
+  .case .p{display:flex;align-items:center;justify-content:center;gap:6px;
+    background:var(--bg);border:1px solid var(--border2);border-radius:8px;
+    padding:6px 10px;font-size:12.5px;font-weight:800;color:var(--gold);
+    font-variant-numeric:tabular-nums}
+  .case .p::before{content:'П';display:inline-flex;align-items:center;justify-content:center;
+    width:14px;height:14px;border-radius:50%;flex:0 0 auto;
+    background:radial-gradient(circle at 30% 30%,#fed7aa,var(--gold) 60%,#c2410c);
+    color:#451a03;font-size:9px;font-weight:900}
+  .case .tag{position:absolute;top:8px;right:8px;font-size:8px;font-weight:800;
+    padding:2px 6px;border-radius:5px;letter-spacing:.5px;text-transform:uppercase;z-index:2}
+  .tag.hot{background:rgba(244,63,94,.15);color:#fda4af}
+  .tag.new{background:rgba(168,85,247,.15);color:var(--accent2)}
+
+  /* INV */
+  .inv-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .inv-stats{display:flex;gap:6px;flex-wrap:wrap}
+  .stat{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:6px 11px}
+  .stat b{display:block;font-size:13.5px;font-weight:800;font-variant-numeric:tabular-nums}
+  .stat span{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+  .inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+  .inv{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px;
+    text-align:center;position:relative;transition:.18s;cursor:pointer}
+  .inv:hover{background:var(--panel2);transform:translateY(-2px)}
+  .inv.cur{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  .inv .burnt{position:absolute;top:6px;right:6px;font-size:14px}
+  .inv canvas{display:block;margin:2px auto 4px}
+  .inv .nm{font-size:11.5px;font-weight:700;line-height:1.25;min-height:28px;
+    display:flex;align-items:center;justify-content:center;margin-bottom:2px}
+  .inv .serial{font-size:9.5px;font-family:ui-monospace,monospace;color:var(--dim);margin-bottom:3px}
+  .inv .rar{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+  .inv .st-line{display:flex;justify-content:center;gap:2px;min-height:16px;margin-bottom:4px;font-size:14px;line-height:1}
+  .inv .val{display:flex;align-items:center;justify-content:center;gap:5px;
+    font-size:12px;font-weight:800;color:var(--gold);font-variant-numeric:tabular-nums;margin-bottom:6px}
+  .inv .val::before{content:'П';display:inline-flex;align-items:center;justify-content:center;
+    width:13px;height:13px;border-radius:50%;flex:0 0 auto;
+    background:radial-gradient(circle at 30% 30%,#fed7aa,var(--gold) 60%,#c2410c);
+    color:#451a03;font-size:8.5px;font-weight:900}
+  .inv .act{display:flex;gap:4px}
+  .inv .act button{flex:1;padding:5px;border:none;border-radius:6px;font-size:10.5px;font-weight:700;
+    cursor:pointer;transition:.15s;background:var(--border);color:var(--dim)}
+  .inv .act button.sell-btn:hover{background:rgba(244,63,94,.15);color:#fda4af}
+  .empty-msg{text-align:center;color:var(--dim2);padding:60px 20px;font-size:13px;grid-column:1/-1;
+    display:flex;flex-direction:column;align-items:center;gap:10px}
+  .empty-msg .ico{font-size:48px;opacity:.35}
+
+  /* MY VAPE */
+  .vape-layout{display:grid;grid-template-columns:1fr 320px;gap:14px}
+  @media(max-width:820px){.vape-layout{grid-template-columns:1fr}}
+  .vape-hero{background:linear-gradient(160deg,var(--panel),#0e0819);
+    border:1px solid var(--border);border-radius:16px;padding:22px;text-align:center;position:relative;overflow:hidden}
+  .vape-hero::before{content:'';position:absolute;bottom:-40%;left:50%;transform:translateX(-50%);
+    width:180%;height:90%;background:radial-gradient(ellipse,var(--vglow,rgba(168,85,247,.25)),transparent 60%);pointer-events:none}
+  .vape-hero>*{position:relative;z-index:1}
+  .vape-hero .vrar{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px}
+  .canvas-wrap{position:relative;display:inline-block;margin:8px 0 4px}
+  .canvas-wrap canvas{display:block;filter:drop-shadow(0 14px 30px rgba(168,85,247,.3))}
+  .sticker-overlay{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}
+  .sticker-overlay .st{position:absolute;font-size:22px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.7));
+    animation:stickerPop .35s cubic-bezier(.2,1.4,.5,1)}
+  @keyframes stickerPop{from{transform:scale(0) rotate(-20deg)}to{transform:scale(1) rotate(0)}}
+  .vape-hero .vname{font-size:20px;font-weight:800;letter-spacing:-.3px;margin-top:4px}
+  .vape-hero .vserial{font-size:11px;font-family:ui-monospace,monospace;color:var(--dim);margin-bottom:4px}
+  .vape-hero .actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+  .bar-wrap{max-width:280px;margin:16px auto 0}
+  .bar-lbl{display:flex;justify-content:space-between;font-size:10.5px;color:var(--dim);
+    font-weight:800;text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px}
+  .bar{height:6px;background:var(--border);border-radius:4px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:4px;transition:width .35s}
+  .bar-fill.energy{background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  .bar-fill.heat{background:var(--red)}
+  .bar-lbl.hot{color:var(--red)}
+  .warn-pulse{animation:warnPulse 1s infinite}
+  @keyframes warnPulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .side-stats{display:flex;flex-direction:column;gap:10px}
+  .srow{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+  .srow .lbl{font-size:10.5px;font-weight:800;color:var(--dim);text-transform:uppercase;
+    letter-spacing:.8px;margin-bottom:6px;display:flex;justify-content:space-between}
+  .price-big{display:flex;align-items:center;gap:8px;font-size:26px;font-weight:900;color:var(--gold);
+    font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-.5px}
+  .price-big::before{content:'П';display:inline-flex;align-items:center;justify-content:center;
+    width:24px;height:24px;border-radius:50%;flex:0 0 auto;
+    background:radial-gradient(circle at 30% 30%,#fed7aa,var(--gold) 60%,#c2410c);
+    color:#451a03;font-size:14px;font-weight:900}
+  .kv{font-size:12.5px;line-height:1.9}
+  .kv b{color:var(--txt);font-weight:700}
+  .kv .k{color:var(--dim);display:inline-block;min-width:88px}
+  .sticker-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+  .slot{aspect-ratio:1;border:1.5px dashed var(--border2);border-radius:10px;
+    display:flex;align-items:center;justify-content:center;font-size:26px;
+    cursor:pointer;transition:.15s;background:var(--bg);position:relative}
+  .slot.filled{border-style:solid;border-color:var(--accent);background:rgba(168,85,247,.08)}
+  .slot:hover{border-color:var(--accent)}
+  .slot .rm{position:absolute;top:3px;right:3px;font-size:10px;color:var(--dim2);
+    background:var(--bg);border-radius:50%;width:16px;height:16px;line-height:16px;text-align:center;opacity:0}
+  .slot:hover .rm{opacity:1}
+  .slot .rm:hover{color:var(--red)}
+
+  /* UPGRADE */
+  .up{display:grid;grid-template-columns:1fr 240px 1fr;gap:12px}
+  @media(max-width:820px){.up{grid-template-columns:1fr}}
+  .up .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px}
+  .up .card h3{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
+    color:var(--dim);margin-bottom:10px;display:flex;justify-content:space-between}
+  .up .card h3 span{color:var(--accent2);font-weight:800}
+  .up-sum{display:flex;align-items:center;justify-content:space-between;
+    background:var(--bg);border:1px solid var(--border2);border-radius:8px;
+    padding:8px 12px;margin-bottom:10px;font-size:12.5px}
+  .up-sum .val{display:flex;align-items:center;gap:5px;font-weight:800;color:var(--gold);
+    font-variant-numeric:tabular-nums}
+  .up-sum .val::before{content:'П';display:inline-flex;align-items:center;justify-content:center;
+    width:13px;height:13px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,#fed7aa,var(--gold) 60%,#c2410c);
+    color:#451a03;font-size:8.5px;font-weight:900}
+  .up-slots{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px}
+  .up-slot{aspect-ratio:1;border:1.5px dashed var(--border2);border-radius:8px;
+    background:var(--bg);display:flex;align-items:center;justify-content:center;
+    font-size:20px;cursor:pointer;position:relative;transition:.15s;overflow:hidden}
+  .up-slot.filled{border-style:solid;border-color:var(--accent);background:rgba(168,85,247,.06)}
+  .up-slot.filled canvas{width:100%;height:100%;object-fit:contain}
+  .up-slot .x{position:absolute;top:2px;right:2px;font-size:10px;color:var(--red);
+    background:var(--bg);border-radius:50%;width:14px;height:14px;line-height:14px;
+    text-align:center;z-index:2}
+  .up-slot:hover{border-color:var(--accent)}
+  .pick-list{max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+  .pick-list::-webkit-scrollbar{width:4px}
+  .pick-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+  .pick{display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--panel2);
+    border:1px solid transparent;border-radius:8px;cursor:pointer;transition:.15s;font-size:12px}
+  .pick:hover{background:var(--border)}
+  .pick.sel{border-color:var(--gold);background:rgba(251,146,60,.06)}
+  .pick canvas{width:20px;height:30px;flex:0 0 auto}
+  .pick .txt{flex:1;min-width:0}
+  .pick .nm{font-weight:700;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pick .vl{font-size:10.5px;color:var(--gold);font-weight:800;margin-top:1px;font-variant-numeric:tabular-nums}
+  .wheel-wrap{position:relative;width:100%;max-width:200px;margin:0 auto 12px;aspect-ratio:1}
+  .wheel{width:100%;height:100%;border-radius:50%;border:4px solid var(--bg);
+    box-shadow:0 0 0 2px var(--border2),0 0 30px rgba(168,85,247,.3);
+    transition:transform 4.2s cubic-bezier(.15,.85,.2,1);position:relative}
+  .wheel::after{content:'';position:absolute;inset:34%;background:var(--bg);border-radius:50%;border:1px solid var(--border2)}
+  .wheel-ctr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;z-index:2}
+  .wheel-ctr .pct{font-size:22px;font-weight:900;color:var(--accent2);font-variant-numeric:tabular-nums}
+  .wheel-ctr .sub{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+  .ptr{position:absolute;top:-12px;left:50%;transform:translateX(-50%);width:0;height:0;
+    border:10px solid transparent;border-top-color:var(--accent);z-index:5;filter:drop-shadow(0 2px 6px rgba(168,85,247,.6))}
+  .ptr::after{content:'';position:absolute;top:-15px;left:-7px;width:14px;height:14px;
+    background:var(--accent);border-radius:50%;box-shadow:0 0 12px var(--accent)}
+  .legend{display:flex;justify-content:center;gap:12px;font-size:11.5px;margin-bottom:10px}
+  .legend span{display:flex;align-items:center;gap:5px;font-weight:700}
+  .dot{width:8px;height:8px;border-radius:50%}
+
+  /* TASKS */
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:720px){.grid-2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px}
+  .card h3{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin-bottom:12px}
+  .mission{display:flex;align-items:center;gap:12px;padding:10px;border-radius:8px;
+    background:var(--panel2);margin-bottom:6px}
+  .mission:last-child{margin-bottom:0}
+  .mission.done{background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.25)}
+  .mission .m-ico{width:30px;height:30px;border-radius:8px;background:var(--border);
+    display:flex;align-items:center;justify-content:center;flex:0 0 auto;font-size:14px}
+  .mission.done .m-ico{background:rgba(168,85,247,.2);color:var(--accent2)}
+  .mission .m-body{flex:1;min-width:0}
+  .mission .m-name{font-size:12.5px;font-weight:700;margin-bottom:2px}
+  .mission .m-prog{font-size:11px;color:var(--dim)}
+  .mission .m-reward{font-size:12px;font-weight:800;color:var(--gold);flex:0 0 auto;font-variant-numeric:tabular-nums}
+  .mission .m-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:5px}
+  .mission .m-fill{height:100%;background:var(--accent);transition:width .5s}
+  .ach-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px}
+  .ach{padding:10px 6px;text-align:center;border-radius:8px;background:var(--panel2);
+    border:1px solid var(--border);opacity:.35;transition:.2s}
+  .ach.on{opacity:1;border-color:var(--gold);background:rgba(251,146,60,.08)}
+  .ach .a-i{font-size:22px;margin-bottom:3px;filter:grayscale(1)}
+  .ach.on .a-i{filter:none}
+  .ach .a-n{font-size:9.5px;font-weight:700;color:var(--dim);line-height:1.2}
+  .ach.on .a-n{color:var(--txt)}
+
+  /* CODE */
+  .code-panel{max-width:480px;margin:0 auto}
+  .code-tabs{display:flex;gap:4px;background:var(--panel);padding:4px;border-radius:10px;
+    border:1px solid var(--border);margin-bottom:14px}
+  .code-tabs button{flex:1;background:transparent;border:none;color:var(--dim);padding:9px 12px;
+    border-radius:7px;font-size:12.5px;font-weight:700;cursor:pointer;transition:.15s}
+  .code-tabs button:hover{color:var(--txt)}
+  .code-tabs button.active{background:var(--accent);color:#fff}
+  .code-panel .card{padding:20px}
+  .code-panel h3{font-size:14px;font-weight:800;margin-bottom:4px}
+  .code-panel p.d{font-size:12px;color:var(--dim);margin-bottom:14px;line-height:1.5}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:10.5px;color:var(--dim);text-transform:uppercase;
+    letter-spacing:.5px;font-weight:800;margin-bottom:6px}
+  input[type=text],textarea{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--txt);
+    padding:12px 14px;border-radius:8px;font-size:13.5px;font-family:ui-monospace,'SF Mono',Consolas,monospace;
+    letter-spacing:1px;font-weight:700;outline:none;transition:.15s;text-align:center;resize:vertical}
+  textarea{min-height:70px;text-align:left;font-size:12px}
+  input:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(168,85,247,.15)}
+  input::placeholder,textarea::placeholder{color:var(--dim2);font-weight:500;letter-spacing:0;text-align:center}
+
+  /* MENU */
+  .menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+  .menu-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;
+    text-align:center;cursor:pointer;transition:.18s}
+  .menu-card:hover{background:var(--panel2);border-color:var(--accent);transform:translateY(-2px)}
+  .menu-card .ic{font-size:32px;margin-bottom:8px}
+  .menu-card .nm{font-size:13px;font-weight:800;margin-bottom:3px}
+  .menu-card .desc{font-size:11px;color:var(--dim);line-height:1.35}
+
+  /* BOTTOM NAV */
+  nav.bottom{position:fixed;bottom:0;left:0;right:0;height:74px;
+    background:rgba(15,10,25,.96);backdrop-filter:blur(20px);
+    border-top:1px solid var(--border);z-index:70;
+    display:flex;align-items:center;justify-content:space-around;padding:0 8px}
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;
+    padding:8px 12px;background:transparent;border:none;color:var(--dim);
+    cursor:pointer;transition:.2s;flex:1;max-width:90px;font-family:inherit}
+  .nav-item svg{width:22px;height:22px;stroke-width:2}
+  .nav-item span{font-size:10.5px;font-weight:700;letter-spacing:.2px}
+  .nav-item:hover{color:var(--txt)}
+  .nav-item.active{color:var(--accent2)}
+  .nav-item.center{position:relative;max-width:76px;padding:0}
+  .nav-item.center .circle{width:56px;height:56px;border-radius:50%;
+    background:linear-gradient(135deg,var(--accent),#7c3aed);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 8px 24px rgba(168,85,247,.5),0 0 0 5px rgba(15,10,25,.96);
+    transform:translateY(-20px);transition:.2s}
+  .nav-item.center svg{width:24px;height:24px;color:#fff;stroke-width:2.5}
+  .nav-item.center span{margin-top:-14px;font-size:10px;color:var(--dim)}
+  .nav-item.center.active span{color:var(--accent2)}
+  .nav-item.center:active .circle{transform:translateY(-20px) scale(.94)}
+
+  /* OVERLAY — центрируем через flex + безопасные отступы */
+  .ov{position:fixed;inset:0;background:rgba(5,3,10,.92);backdrop-filter:blur(10px);
+    z-index:200;display:none;align-items:center;justify-content:center;
+    padding:16px;overflow-y:auto;overflow-x:hidden}
+  .ov.on{display:flex;animation:fade .2s}
+  .ov-inner{width:100%;max-width:520px;margin:auto;display:flex;flex-direction:column;
+    align-items:center;gap:14px;padding:8px 0}
+
+  /* MODAL */
+  .modal-card{background:linear-gradient(160deg,var(--panel),#0e0819);
+    border:1.5px solid var(--border2);border-radius:18px;padding:20px;
+    width:100%;max-width:340px;
+    position:relative;animation:pop .3s cubic-bezier(.2,1.4,.5,1);
+    box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  @keyframes pop{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+  .modal-card>*{position:relative;z-index:1}
+  .modal-close{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:50%;
+    background:var(--bg);border:1px solid var(--border2);color:var(--txt);font-size:14px;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;z-index:3}
+  .modal-close:hover{background:var(--border);border-color:var(--red);color:var(--red)}
+
+  /* CASE MODAL */
+  .cm-items{display:flex;gap:5px;overflow-x:auto;padding:8px 2px;margin-bottom:14px;
+    border-top:1px solid var(--border);border-bottom:1px solid var(--border);scrollbar-width:thin}
+  .cm-items::-webkit-scrollbar{height:4px}
+  .cm-items::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+  .cm-item{flex:0 0 auto;text-align:center;width:56px;position:relative}
+  .cm-item canvas{display:block;margin:0 auto 2px}
+  .cm-item .pc{position:absolute;top:0;right:0;font-size:8px;font-weight:800;
+    background:rgba(0,0,0,.7);padding:1px 4px;border-radius:4px;color:#fff}
+
+  /* RESULT MODAL */
+  .rm-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px}
+  .rm-rarity{font-size:10px;font-weight:900;letter-spacing:1.2px;text-transform:uppercase;
+    padding:4px 10px;border-radius:6px;border:1.5px solid}
+  .rm-payout{font-size:10px;font-weight:900;letter-spacing:.6px;
+    padding:4px 10px;border-radius:6px}
+  .rm-payout.profit{background:rgba(74,222,128,.15);color:#4ade80}
+  .rm-payout.loss{background:rgba(244,63,94,.15);color:#fda4af}
+  .rm-payout.even{background:rgba(251,146,60,.15);color:#fed7aa}
+  .rm-art{text-align:center;position:relative;margin:4px 0 8px}
+  .rm-art::before{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+    width:180px;height:60px;background:radial-gradient(ellipse,var(--rglow,rgba(168,85,247,.6)),transparent 70%);
+    filter:blur(20px);pointer-events:none;z-index:0}
+  .rm-art canvas{display:block;margin:0 auto;position:relative;z-index:1;
+    filter:drop-shadow(0 14px 30px rgba(0,0,0,.6))}
+  .rm-name{font-size:20px;font-weight:900;text-align:center;letter-spacing:-.4px}
+  .rm-sub{font-size:11.5px;text-align:center;font-weight:700;margin-bottom:12px}
+  .rm-price{background:var(--bg);border:1px solid var(--border2);border-radius:10px;
+    padding:12px;text-align:center;margin-bottom:14px}
+  .rm-price .v{font-size:22px;font-weight:900;color:var(--gold);font-variant-numeric:tabular-nums;
+    display:flex;align-items:center;justify-content:center;gap:8px}
+  .rm-price .v::before{content:'П';display:inline-flex;align-items:center;justify-content:center;
+    width:20px;height:20px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,#fed7aa,var(--gold) 60%,#c2410c);
+    color:#451a03;font-size:12px;font-weight:900}
+  .rm-actions{display:flex;flex-direction:column;gap:8px}
+
+  /* BUTTONS */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    padding:12px 16px;border:none;border-radius:10px;font-size:13.5px;font-weight:800;
+    cursor:pointer;transition:.15s;background:var(--accent);color:#fff;font-family:inherit}
+  .btn:hover{background:var(--accent2);transform:translateY(-1px)}
+  .btn:active{transform:scale(.98)}
+  .btn:disabled{background:var(--border);color:var(--dim2);cursor:not-allowed;transform:none}
+  .btn.full{width:100%}
+  .btn.gold{background:linear-gradient(135deg,#f59e0b,var(--gold));color:#451a03;
+    box-shadow:0 8px 24px rgba(251,146,60,.35)}
+  .btn.gold:hover{background:linear-gradient(135deg,var(--gold),var(--gold2))}
+  .btn.green{background:transparent;color:#4ade80;border:1.5px solid rgba(74,222,128,.5)}
+  .btn.green:hover{background:rgba(74,222,128,.1);border-color:#4ade80}
+  .btn.ghost{background:var(--bg);border:1px solid var(--border2);color:var(--txt)}
+  .btn.ghost:hover{background:var(--panel2);border-color:var(--dim2)}
+  .btn.sm{padding:8px 12px;font-size:12px}
+
+  /* REEL */
+  .reel-win{width:100%;max-width:640px;height:140px;overflow:hidden;position:relative;
+    border:2px solid var(--border2);border-radius:14px;background:var(--bg);
+    box-shadow:0 0 40px rgba(168,85,247,.2);flex:0 0 auto}
+  .reel{display:flex;gap:6px;height:100%;align-items:center;padding:0 6px;will-change:transform}
+  .ri{flex:0 0 84px;width:84px;height:116px;border:1.5px solid var(--border2);border-radius:10px;
+    background:var(--panel2);display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:3px;padding:5px}
+  .ri span{font-size:8px;line-height:1.1;text-align:center;color:var(--dim);max-height:18px;overflow:hidden;font-weight:600}
+  .marker{position:absolute;left:50%;top:-2px;bottom:-2px;width:3px;background:var(--accent);
+    transform:translateX(-50%);box-shadow:0 0 20px var(--accent);z-index:5;border-radius:2px}
+  .marker::before,.marker::after{content:'';position:absolute;left:50%;transform:translateX(-50%);
+    border:7px solid transparent}
+  .marker::before{top:-9px;border-top-color:var(--accent)}
+  .marker::after{bottom:-9px;border-bottom-color:var(--accent)}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(70px);
+    background:var(--panel2);border:1px solid var(--border2);color:var(--txt);
+    padding:11px 18px;border-radius:10px;font-weight:600;font-size:13px;z-index:400;
+    transition:.25s;opacity:0;max-width:90vw;text-align:center;
+    box-shadow:0 10px 30px rgba(0,0,0,.5);pointer-events:none}
+  .toast.on{transform:translateX(-50%) translateY(0);opacity:1}
+  .toast.good{border-color:rgba(74,222,128,.5)}
+  .toast.bad{border-color:rgba(244,63,94,.5)}
+
+  .checks{display:flex;flex-direction:column;gap:3px;margin-top:12px}
+  .check{display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 10px;
+    background:var(--panel2);border:1px solid var(--border);border-radius:7px;transition:.2s}
+  .check .ico{width:15px;height:15px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-size:9px;font-weight:900;flex:0 0 auto;background:var(--border);color:var(--dim2)}
+  .check.ok{border-color:rgba(74,222,128,.35);background:rgba(74,222,128,.06)}
+  .check.ok .ico{background:#4ade80;color:#052e1a}
+  .check.bad{border-color:rgba(244,63,94,.35);background:rgba(244,63,94,.06)}
+  .check.bad .ico{background:var(--red);color:#fff}
+  .check .txt{color:var(--dim);font-weight:600}
+  .check.ok .txt,.check.bad .txt{color:var(--txt)}
+
+  .status{padding:12px 14px;border-radius:10px;font-size:13px;display:none;
+    align-items:center;gap:10px;line-height:1.4;margin-top:12px}
+  .status.on{display:flex}
+  .status.ok{background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.3);color:#bbf7d0}
+  .status.bad{background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.3);color:#fecaca}
+  .status .ico{width:20px;height:20px;border-radius:50%;flex:0 0 auto;display:flex;
+    align-items:center;justify-content:center;font-size:12px;font-weight:900}
+  .status.ok .ico{background:#4ade80;color:#052e1a}
+  .status.bad .ico{background:var(--red);color:#fff}
+
+  @media(max-width:600px){
+    header{padding:0 12px;gap:8px;height:56px}
+    .logo-main{font-size:15px}
+    .logo-sub{font-size:7.5px;letter-spacing:1.5px}
+    .logo-mark{width:28px;height:28px}
+    .lvl-wrap{display:none}
+    .bal{padding:6px 10px;font-size:12.5px}
+    main{padding:14px 12px 40px}
+    .nav-item span{font-size:10px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round">
+        <path d="M12 2v20M2 12h20"/>
+      </svg>
+    </div>
+    <div class="logo-text">
+      <span class="logo-main">PodDrop</span>
+      <span class="logo-sub">симулятор вейпов</span>
+    </div>
+  </div>
+  <div class="user-area">
+    <div class="lvl-wrap">
+      <div class="lvl-top"><span>УР. <b id="lvlNum">1</b></span><span id="xpTxt">0/100</span></div>
+      <div class="lvl-bar"><div class="lvl-fill" id="xpBar"></div></div>
+    </div>
+    <div class="bal"><span class="curr" id="bal">600</span></div>
+  </div>
+</header>
+
+<main>
+  <section class="view active" id="vCases">
+    <h2>Кейсы <small id="dailyCd"></small></h2>
+    <div class="cases" id="casesGrid"></div>
+  </section>
+
+  <section class="view" id="vVape">
+    <h2>Мой вейп</h2>
+    <div id="vapeBox"></div>
+  </section>
+
+  <section class="view" id="vTasks">
+    <h2>Задания</h2>
+    <div class="grid-2">
+      <div class="card"><h3>Миссии</h3><div id="missionsBox"></div></div>
+      <div class="card"><h3>Достижения</h3><div class="ach-grid" id="achBox"></div></div>
+    </div>
+  </section>
+
+  <section class="view" id="vCode">
+    <h2>Код</h2>
+    <div class="code-panel">
+      <div class="code-tabs">
+        <button id="tabGame" class="active">🎁 Игровой</button>
+        <button id="tabTopup">💳 Пополнение</button>
+      </div>
+
+      <div id="paneGame">
+        <div class="card">
+          <h3>Активация игрового кода</h3>
+          <p class="d">Введи код, выданный администратором. Эксклюзивы доступны только так.</p>
+          <input type="text" id="codeInput" placeholder="POD-..." autocomplete="off" spellcheck="false">
+          <button class="btn full" id="redeemBtn" style="margin-top:12px">Проверить и получить</button>
+          <div class="checks" id="checks">
+            <div class="check"><div class="ico">·</div><div class="txt">Формат кода</div></div>
+            <div class="check"><div class="ico">·</div><div class="txt">Префикс POD</div></div>
+            <div class="check"><div class="ico">·</div><div class="txt">Символы</div></div>
+            <div class="check"><div class="ico">·</div><div class="txt">Структура</div></div>
+            <div class="check"><div class="ico">·</div><div class="txt">Подпись</div></div>
+            <div class="check"><div class="ico">·</div><div class="txt">Данные</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="paneTopup" style="display:none">
+        <div class="card" style="margin-bottom:12px">
+          <h3>1. Запросить пополнение</h3>
+          <p class="d">Создай REQ-код, отправь админу. Он подтвердит оплату и пришлёт ответный TOPUP.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
+            <div class="menu-card" data-rub="100" style="padding:12px 6px"><div style="font-size:16px;font-weight:800">100 ₽</div><div style="font-size:11px;color:var(--gold);font-weight:800">1000 П</div></div>
+            <div class="menu-card" data-rub="500" style="padding:12px 6px"><div style="font-size:16px;font-weight:800">500 ₽</div><div style="font-size:11px;color:var(--gold);font-weight:800">5000 П</div></div>
+            <div class="menu-card" data-rub="1000" style="padding:12px 6px"><div style="font-size:16px;font-weight:800">1000 ₽</div><div style="font-size:11px;color:var(--gold);font-weight:800">10000 П</div></div>
+            <div class="menu-card" data-rub="5000" style="padding:12px 6px"><div style="font-size:16px;font-weight:800">5000 ₽</div><div style="font-size:11px;color:var(--gold);font-weight:800">50000 П</div></div>
+          </div>
+          <div class="field"><label>Или своя сумма (₽, от 50)</label>
+            <input type="text" id="customRub" placeholder="250" inputmode="numeric"></div>
+          <button class="btn gold full" id="makeReqBtn">Создать REQ-код</button>
+          <div id="reqOut" style="margin-top:12px;display:none">
+            <div style="font-family:ui-monospace,monospace;font-size:11px;font-weight:700;
+              background:#1a0f2e;border:1.5px dashed #4c1d95;border-radius:8px;padding:12px;
+              color:var(--accent2);word-break:break-all;text-align:center;line-height:1.6" id="reqCode"></div>
+            <button class="btn ghost full sm" id="copyReqBtn" style="margin-top:8px">📋 Скопировать</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>2. Активировать ответный код</h3>
+          <input type="text" id="topupInput" placeholder="TOPUP-..." autocomplete="off" spellcheck="false">
+          <button class="btn full" id="activateBtn" style="margin-top:12px">Активировать</button>
+          <div class="status" id="topupStatus"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="vMore">
+    <h2>Ещё</h2>
+    <div class="menu-grid">
+      <div class="menu-card" data-go="vUp"><div class="ic">⬆️</div><div class="nm">Апгрейд</div><div class="desc">Обмен вейпов на лучший</div></div>
+      <div class="menu-card" data-go="vInv"><div class="ic">🎒</div><div class="nm">Инвентарь</div><div class="desc">Все твои девайсы</div></div>
+      <div class="menu-card" data-go="vCode"><div class="ic">🔓</div><div class="nm">Коды</div><div class="desc">Активация и пополнение</div></div>
+      <div class="menu-card" data-go="vTasks"><div class="ic">📋</div><div class="nm">Задания</div><div class="desc">Миссии и достижения</div></div>
+    </div>
+  </section>
+
+  <section class="view" id="vInv">
+    <div class="inv-head">
+      <div class="inv-stats">
+        <div class="stat"><b id="sItems">0</b><span>вейпов</span></div>
+        <div class="stat"><b id="sValue">0</b><span>стоимость</span></div>
+        <div class="stat"><b id="sStickers">0</b><span>наклеек</span></div>
+        <div class="stat"><b id="sRepairs">0</b><span>ремкомплектов</span></div>
+        <div class="stat"><b id="sBatKits">0</b><span>батарей</span></div>
+      </div>
+      <button class="btn ghost sm" id="sellAllBtn">💸 Продать всё</button>
+    </div>
+    <div class="inv-grid" id="invGrid"></div>
+  </section>
+
+  <section class="view" id="vUp">
+    <h2>Апгрейд</h2>
+    <div class="up">
+      <div class="card">
+        <h3>Что ставим <span id="upCount">0/5</span></h3>
+        <div class="up-slots" id="upSlots"></div>
+        <div class="up-sum"><span style="color:var(--dim);font-weight:700">Сумма</span>
+          <span class="val" id="upSum">0</span></div>
+        <div class="pick-list" id="srcList"></div>
+      </div>
+      <div class="card" style="text-align:center">
+        <h3 style="justify-content:center">Шанс</h3>
+        <div class="wheel-wrap">
+          <div class="ptr"></div>
+          <div class="wheel" id="wheel" style="background:conic-gradient(#334155 0deg 360deg)"></div>
+          <div class="wheel-ctr">
+            <div class="pct" id="chancePct">—</div>
+            <div class="sub" id="chanceSub">выбери цель</div>
+          </div>
+        </div>
+        <div class="legend">
+          <span><span class="dot" style="background:var(--accent)"></span>Успех <b id="lgOk" style="color:var(--accent2)">—</b></span>
+          <span><span class="dot" style="background:var(--red)"></span>Провал <b id="lgBad" style="color:#fda4af">—</b></span>
+        </div>
+        <button class="btn gold full" id="spinBtn" disabled>Крутить</button>
+        <div style="font-size:11px;color:var(--dim);margin-top:8px" id="ratioInfo">—</div>
+      </div>
+      <div class="card">
+        <h3>Во что целился</h3>
+        <div class="pick-list" id="tgtList"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<nav class="bottom">
+  <button class="nav-item" data-tab="vTasks">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+    <span>Задания</span>
+  </button>
+  <button class="nav-item" data-tab="vCode">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+    <span>Код</span>
+  </button>
+  <button class="nav-item center active" data-tab="vCases">
+    <div class="circle">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M3 11h18M12 7V3"/></svg>
+    </div>
+    <span>Кейсы</span>
+  </button>
+  <button class="nav-item" data-tab="vVape">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><rect x="9" y="2" width="6" height="20" rx="2"/><path d="M9 8h6M9 14h6"/></svg>
+    <span>Мой вейп</span>
+  </button>
+  <button class="nav-item" data-tab="vMore">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+    <span>Ещё</span>
+  </button>
+</nav>
+
+<div class="ov" id="ov"><div class="ov-inner" id="ovContent"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ==========================================================
+   SPRITES
+========================================================== */
+function shade(hex,amt){
+  let c=hex.replace('#','');
+  let r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);
+  if(amt<0){r=Math.round(r*(1+amt));g=Math.round(g*(1+amt));b=Math.round(b*(1+amt));}
+  else{r=Math.round(r+(255-r)*amt);g=Math.round(g+(255-g)*amt);b=Math.round(b+(255-b)*amt);}
+  return '#'+[r,g,b].map(v=>Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('');
+}
+const pal=(m,a)=>({main:m,dark:shade(m,-.55),light:shade(m,.35),accent:a,bright:shade(a,.5),shadow:shade(m,-.75)});
+
+const SHAPES={
+  disposable:R=>{R(7,4,10,26,'shadow');R(8,3,8,28,'dark');R(9,2,6,4,'dark');R(9,6,6,24,'main');R(9,6,2,24,'light');R(9,14,6,3,'accent');R(12,26,2,2,'bright');},
+  podsystem:R=>{R(8,5,8,24,'shadow');R(9,4,6,26,'dark');R(10,3,4,3,'dark');R(10,7,4,22,'main');R(10,7,1,22,'light');R(10,10,4,7,'accent');R(12,25,1,1,'bright');},
+  boxmod:R=>{R(7,1,10,10,'shadow');R(8,2,8,8,'accent');R(8,4,8,2,'light');R(4,12,16,19,'shadow');R(5,11,14,19,'dark');R(6,13,12,15,'main');R(6,13,2,15,'light');R(8,16,5,5,'bright');R(15,16,3,3,'accent');R(15,22,3,6,'accent');},
+  pen:R=>{R(9,3,6,26,'shadow');R(10,2,4,28,'dark');R(11,3,2,26,'main');R(11,3,1,26,'light');R(11,12,2,4,'accent');R(11,26,2,2,'bright');},
+  squonk:R=>{R(4,4,16,25,'shadow');R(5,3,14,26,'dark');R(6,5,12,22,'main');R(6,5,2,22,'light');R(15,8,3,8,'accent');R(8,11,6,5,'bright');R(8,20,6,6,'accent');},
+  mechmod:R=>{R(9,2,6,28,'shadow');R(10,1,4,29,'dark');R(11,3,2,26,'main');R(11,3,1,26,'light');R(11,12,2,5,'accent');R(9,0,6,3,'accent');R(11,27,2,2,'bright');}
+};
+const CASE_SHAPE=R=>{
+  R(1,10,22,8,'shadow');R(3,11,18,6,'dark');R(3,11,18,1,'light');
+  R(1,17,22,14,'shadow');R(3,19,18,10,'main');R(3,19,18,1,'light');R(11,17,2,7,'accent');
+};
+function drawSprite(cv,shapeKey,P){
+  const ctx=cv.getContext('2d'),u=cv.width/24;
+  ctx.clearRect(0,0,cv.width,cv.height);ctx.imageSmoothingEnabled=false;
+  const R=(x,y,w,h,k)=>{ctx.fillStyle=P[k]||k;ctx.fillRect(Math.round(x*u),Math.round(y*u),Math.round(w*u),Math.round(h*u));};
+  (SHAPES[shapeKey]||SHAPES.disposable)(R);
+}
+function drawCase(cv,P){
+  const ctx=cv.getContext('2d'),u=cv.width/24;
+  ctx.clearRect(0,0,cv.width,cv.height);ctx.imageSmoothingEnabled=false;
+  const R=(x,y,w,h,k)=>{ctx.fillStyle=P[k]||k;ctx.fillRect(Math.round(x*u),Math.round(y*u),Math.round(w*u),Math.round(h*u));};
+  CASE_SHAPE(R);
+}
+function spriteEl(item,w,h){
+  const cv=document.createElement('canvas');cv.width=240;cv.height=320;
+  drawSprite(cv,item.sprite,item.palette);
+  cv.style.width=w+'px';cv.style.height=h+'px';cv.style.imageRendering='pixelated';
+  return cv;
+}
+function caseEl(P,w,h){
+  const cv=document.createElement('canvas');cv.width=240;cv.height=320;
+  drawCase(cv,P);cv.style.width=w+'px';cv.style.height=h+'px';cv.style.imageRendering='pixelated';
+  return cv;
+}
+
+/* ==========================================================
+   DATA
+========================================================== */
+const RARITY={
+  common:{name:'Обычный',color:'#94a3b8',base:200,xp:2},
+  uncommon:{name:'Необычный',color:'#4ade80',base:450,xp:5},
+  rare:{name:'Редкий',color:'#60a5fa',base:950,xp:15},
+  epic:{name:'Эпический',color:'#a78bfa',base:2300,xp:40},
+  legendary:{name:'Легендарный',color:'#fbbf24',base:5200,xp:120},
+  mythic:{name:'МИФ',color:'#c084fc',base:18000,xp:400},
+  exclusive:{name:'ЭКСКЛЮЗИВ',color:'#f43f5e',base:30000,xp:800},
+  absolute:{name:'АБСОЛЮТ',color:'#fde047',base:200000,xp:2000}
+};
+const RARITY_LIST=['common','uncommon','rare','epic','legendary','mythic','exclusive','absolute'];
+const VARIANTS=[
+  {id:0,name:'Стандарт',main:null,accent:null},
+  {id:1,name:'Ночь',main:'#1e293b',accent:'#60a5fa'},
+  {id:2,name:'Золото',main:'#78350f',accent:'#fbbf24'},
+  {id:3,name:'Пламя',main:'#7f1d1d',accent:'#fb923c'},
+  {id:4,name:'Лёд',main:'#0c4a6e',accent:'#67e8f9'},
+  {id:5,name:'Матрица',main:'#14532d',accent:'#4ade80'},
+  {id:6,name:'Роза',main:'#831843',accent:'#f9a8d4'},
+  {id:7,name:'Пустыня',main:'#78350f',accent:'#fcd34d'}
+];
+const BATTERIES=[900,1200,1500,2000];
+const BATTERY_MULT={900:1,1200:1.2,1500:1.5,2000:2.0};
+const BATTERY_LEVELS=[900,1200,1500,2000];
+const FLAVORS=['Манго','Вишня','Ледяная мята','Клубника','Виноград','Арбуз','Лимон-лайм','Черника','Яблоко','Кофе','Кола','Дыня','Персик','Киви','Энергетик'];
+const SPRITE_LIST=['disposable','podsystem','boxmod','pen','squonk','mechmod'];
+
+const MODELS={
+  /* === COMMON === */
+  brusko:{name:'Brusko Original',rarity:'common',price:150,sprite:'pen',palette:pal('#6b7280','#f6ad55')},
+  hqd_cuvie:{name:'HQD Cuvie Plus',rarity:'common',price:180,sprite:'disposable',palette:pal('#5b6472','#9aa5b5')},
+  elfbar_600:{name:'Elf Bar 600',rarity:'common',price:200,sprite:'disposable',palette:pal('#3f4a5a','#63b3ed')},
+  puff_xxl:{name:'Puff XXL',rarity:'common',price:220,sprite:'disposable',palette:pal('#4d5868','#f687b3')},
+  hqd_cuvie_bar:{name:'HQD Cuvie Bar',rarity:'common',price:260,sprite:'disposable',palette:pal('#4b5563','#a78bfa')},
+  elfbar_800:{name:'Elf Bar 800',rarity:'common',price:300,sprite:'disposable',palette:pal('#1e3a5f','#93c5fd')},
+  waka_solo:{name:'Waka Solo',rarity:'common',price:350,sprite:'pen',palette:pal('#7c2d12','#fdba74')},
+
+  /* === UNCOMMON === */
+  elfbar_bc:{name:'Elf Bar BC5000',rarity:'uncommon',price:400,sprite:'disposable',palette:pal('#2f855a','#68d391')},
+  lostmary_bm:{name:'Lost Mary BM5000',rarity:'uncommon',price:450,sprite:'disposable',palette:pal('#2c7a7b','#4fd1c5')},
+  waka_sopro:{name:'Waka Sopro',rarity:'uncommon',price:500,sprite:'pen',palette:pal('#975a16','#f6ad55')},
+  hqd_ultima:{name:'HQD Ultima',rarity:'uncommon',price:550,sprite:'disposable',palette:pal('#38618c','#63b3ed')},
+  elfbar_te:{name:'Elf Bar TE6000',rarity:'uncommon',price:600,sprite:'disposable',palette:pal('#166534','#86efac')},
+  lostmary_os:{name:'Lost Mary OS5000',rarity:'uncommon',price:700,sprite:'disposable',palette:pal('#0e7490','#67e8f9')},
+  vozol_gear:{name:'Vozol Gear 10000',rarity:'uncommon',price:800,sprite:'pen',palette:pal('#7c3aed','#c4b5fd')},
+
+  /* === RARE === */
+  vuse_alto:{name:'Vuse Alto',rarity:'rare',price:900,sprite:'podsystem',palette:pal('#2b6cb0','#90cdf4')},
+  juul_c1:{name:'Juul C1',rarity:'rare',price:1000,sprite:'podsystem',palette:pal('#4c51bf','#a3bffa')},
+  suorin_air:{name:'Suorin Air',rarity:'rare',price:1100,sprite:'podsystem',palette:pal('#285e61','#81e6d9')},
+  caliburn:{name:'Uwell Caliburn',rarity:'rare',price:1200,sprite:'podsystem',palette:pal('#553c9a','#d6bcfa')},
+  vmate:{name:'Voopoo Vmate',rarity:'rare',price:1400,sprite:'podsystem',palette:pal('#831843','#f9a8d4')},
+  novo4:{name:'SMOK Novo 4',rarity:'rare',price:1600,sprite:'podsystem',palette:pal('#1e40af','#93c5fd')},
+  xros2:{name:'Vaporesso XROS 2',rarity:'rare',price:1700,sprite:'podsystem',palette:pal('#6d28d9','#c4b5fd')},
+
+  /* === EPIC === */
+  smok_nord5:{name:'SMOK Nord 5',rarity:'epic',price:2000,sprite:'boxmod',palette:pal('#7b341e','#fbd38d')},
+  drag_nano:{name:'Voopoo Drag Nano',rarity:'epic',price:2200,sprite:'boxmod',palette:pal('#702459','#fbb6ce')},
+  xros3:{name:'Vaporesso XROS 3',rarity:'epic',price:2400,sprite:'boxmod',palette:pal('#1a365d','#90cdf4')},
+  aegis_pod:{name:'GeekVape Aegis Pod',rarity:'epic',price:2600,sprite:'boxmod',palette:pal('#22543d','#9ae6b4')},
+  squonk_x:{name:'Vandy Vape Pulse',rarity:'epic',price:2800,sprite:'squonk',palette:pal('#4a044e','#e879f9')},
+  gen_pt80:{name:'Vaporesso Gen PT80',rarity:'epic',price:3200,sprite:'boxmod',palette:pal('#0369a1','#7dd3fc')},
+  rpm4:{name:'SMOK RPM 4',rarity:'epic',price:3600,sprite:'boxmod',palette:pal('#7f1d1d','#fca5a5')},
+  argus_gt2:{name:'Voopoo Argus GT II',rarity:'epic',price:4200,sprite:'boxmod',palette:pal('#134e4a','#5eead4')},
+
+  /* === LEGENDARY === */
+  argus_pro:{name:'Voopoo Argus Pro',rarity:'legendary',price:5000,sprite:'boxmod',palette:pal('#975a16','#f6e05e')},
+  rpm5_pro:{name:'SMOK RPM 5 Pro',rarity:'legendary',price:5500,sprite:'boxmod',palette:pal('#742a2a','#feb2b2')},
+  aegis_legend:{name:'GeekVape Aegis Legend',rarity:'legendary',price:6000,sprite:'boxmod',palette:pal('#744210','#fbd38d')},
+  centaurus:{name:'Lost Vape Centaurus',rarity:'legendary',price:7000,sprite:'boxmod',palette:pal('#4a1d5c','#d6bcfa')},
+  mech_pro:{name:'Kennedy Vindicator',rarity:'legendary',price:8000,sprite:'mechmod',palette:pal('#1c1917','#fbbf24')},
+  drag_x_pro:{name:'Voopoo Drag X Pro',rarity:'legendary',price:9000,sprite:'boxmod',palette:pal('#0c4a6e','#67e8f9')},
+  thelema:{name:'Lost Vape Thelema',rarity:'legendary',price:9500,sprite:'boxmod',palette:pal('#3b0764','#d8b4fe')},
+
+  /* === MYTHIC === */
+  drag5:{name:'Voopoo Drag 5',rarity:'mythic',price:12000,sprite:'boxmod',palette:pal('#0f172a','#fbbf24')},
+  centaurus_dna:{name:'Lost Vape Centaurus DNA',rarity:'mythic',price:14000,sprite:'boxmod',palette:pal('#312e81','#a78bfa')},
+  titan_v2:{name:'Steam Crave Titan V2',rarity:'mythic',price:16000,sprite:'boxmod',palette:pal('#450a0a','#fde047')},
+  asmodus:{name:'Asmodus Minikin 3',rarity:'mythic',price:18000,sprite:'boxmod',palette:pal('#1e1b4b','#818cf8')},
+  odin_dna:{name:'Dovpo Odin DNA',rarity:'mythic',price:20000,sprite:'boxmod',palette:pal('#431407','#fed7aa')},
+  hyperion_dna:{name:'Lost Vape Hyperion DNA',rarity:'mythic',price:22000,sprite:'boxmod',palette:pal('#581c87','#e9d5ff')},
+
+  abs_ultimate:{name:'PodDrop Ultimate',rarity:'absolute',price:150000,sprite:'boxmod',palette:pal('#4c1d95','#fbbf24')},
+abs_grandmaster:{name:'Grandmaster Pod',rarity:'absolute',price:200000,sprite:'boxmod',palette:pal('#0f172a','#fde047')},
+abs_omnipotent:{name:'Omnipotent Vape',rarity:'absolute',price:250000,sprite:'boxmod',palette:pal('#7c2d12','#fef08a')},
+abs_infinity:{name:'Infinity Pod',rarity:'absolute',price:350000,sprite:'boxmod',palette:pal('#831843','#fbbf24')},
+abs_admin:{name:'The Admin\'s Choice',rarity:'absolute',price:500000,sprite:'boxmod',palette:pal('#7c3aed','#fbbf24')},
+  
+  /* === EXCLUSIVE (только через код) === */
+  xros_tester:{name:'XROS Тестера',rarity:'exclusive',price:30000,sprite:'boxmod',palette:pal('#b91c1c','#fde047')},
+  alpha_test:{name:'Voopoo Alpha Test',rarity:'exclusive',price:35000,sprite:'boxmod',palette:pal('#1e40af','#fbbf24')},
+  first_pod:{name:'Первый Под',rarity:'exclusive',price:40000,sprite:'pen',palette:pal('#78350f','#fef08a')},
+  hqd_founder:{name:'HQD Founder\'s Edition',rarity:'exclusive',price:50000,sprite:'disposable',palette:pal('#7c2d12','#fef3c7')},
+  admin_edition:{name:'PodDrop Admin Edition',rarity:'exclusive',price:75000,sprite:'boxmod',palette:pal('#7c3aed','#fbbf24')}
+};
+const MODEL_ORDER=Object.keys(MODELS);
+
+const STICKERS={
+  smile:{name:'Смайл',rarity:'common',icon:'😊',bonus:10},
+  bolt:{name:'Молния',rarity:'common',icon:'⚡',bonus:10},
+  heart:{name:'Сердце',rarity:'common',icon:'💚',bonus:10},
+  skull:{name:'Череп',rarity:'uncommon',icon:'💀',bonus:25},
+  crown:{name:'Корона',rarity:'uncommon',icon:'👑',bonus:25},
+  fire:{name:'Пламя',rarity:'rare',icon:'🔥',bonus:60},
+  dragon:{name:'Дракон',rarity:'rare',icon:'🐉',bonus:60},
+  alien:{name:'Пришелец',rarity:'epic',icon:'👽',bonus:150},
+  holo:{name:'Голографик',rarity:'epic',icon:'🌈',bonus:150},
+  star:{name:'Звезда',rarity:'legendary',icon:'⭐',bonus:400},
+  trophy:{name:'Кубок',rarity:'legendary',icon:'🏆',bonus:400}
+};
+
+const CASES={
+  novice:{name:'Кейс новичка',sub:'Для старта',price:240,palette:pal('#475569','#94a3b8'),tag:'new',
+    drops:[{id:'brusko',w:35},{id:'hqd_cuvie',w:30},{id:'elfbar_600',w:20},
+      {id:'puff_xxl',w:10},{id:'hqd_cuvie_bar',w:4},{id:'elfbar_800',w:1}]},
+  budget:{name:'Бюджетный',sub:'Расходники',price:320,palette:pal('#4a5568','#22d3ee'),
+    drops:[{id:'hqd_cuvie',w:25},{id:'elfbar_600',w:22},{id:'puff_xxl',w:18},{id:'hqd_cuvie_bar',w:14},{id:'elfbar_800',w:10},
+      {id:'waka_solo',w:6},{id:'elfbar_bc',w:3},{id:'lostmary_bm',w:1.5},{id:'waka_sopro',w:0.5}]},
+  lucky:{name:'Кейс удачи',sub:'Повышенный шанс',price:650,palette:pal('#15803d','#4ade80'),tag:'hot',
+    drops:[{id:'elfbar_bc',w:22},{id:'lostmary_bm',w:20},{id:'waka_sopro',w:18},{id:'hqd_ultima',w:14},{id:'elfbar_te',w:10},
+      {id:'lostmary_os',w:8},{id:'vozol_gear',w:5},{id:'vuse_alto',w:1.5},{id:'juul_c1',w:1},{id:'suorin_air',w:0.4},
+      {id:'caliburn',w:0.08},{id:'vmate',w:0.015},{id:'novo4',w:0.005}]},
+  middle:{name:'Средний',sub:'Под-системы',price:1500,palette:pal('#2c5282','#63b3ed'),
+    drops:[{id:'vuse_alto',w:25},{id:'juul_c1',w:20},{id:'suorin_air',w:18},{id:'caliburn',w:15},{id:'vmate',w:10},
+      {id:'novo4',w:6},{id:'xros2',w:3},{id:'smok_nord5',w:1},{id:'drag_nano',w:0.5},
+      {id:'xros3',w:0.3},{id:'aegis_pod',w:0.1},{id:'squonk_x',w:0.05},
+      {id:'gen_pt80',w:0.03},{id:'rpm4',w:0.01},{id:'argus_gt2',w:0.01}]},
+  night:{name:'Ночной',sub:'Редкие вкусы',price:2400,palette:pal('#4c1d95','#a78bfa'),
+    drops:[{id:'vuse_alto',w:10},{id:'juul_c1',w:10},{id:'suorin_air',w:9},{id:'caliburn',w:8},{id:'vmate',w:7},
+      {id:'novo4',w:6},{id:'xros2',w:5},
+      {id:'smok_nord5',w:12},{id:'drag_nano',w:10},{id:'xros3',w:8},{id:'aegis_pod',w:5},{id:'squonk_x',w:3},
+      {id:'gen_pt80',w:2},{id:'rpm4',w:1.5},{id:'argus_gt2',w:1},
+      {id:'argus_pro',w:0.5},{id:'rpm5_pro',w:0.3},{id:'aegis_legend',w:0.1}]},
+  workshop:{name:'Мастерская',sub:'Наклейки и расходники',price:500,palette:pal('#854d0e','#fbbf24'),tag:'new',
+    drops:[
+      {id:'sticker_smile',w:10,type:'sticker'},{id:'sticker_bolt',w:10,type:'sticker'},{id:'sticker_heart',w:10,type:'sticker'},
+      {id:'sticker_skull',w:8,type:'sticker'},{id:'sticker_crown',w:8,type:'sticker'},
+      {id:'sticker_fire',w:5,type:'sticker'},{id:'sticker_dragon',w:5,type:'sticker'},
+      {id:'sticker_alien',w:2,type:'sticker'},{id:'sticker_holo',w:2,type:'sticker'},
+      {id:'sticker_star',w:0.5,type:'sticker'},{id:'sticker_trophy',w:0.5,type:'sticker'},
+      {id:'repair_kit',w:15,type:'repair'},{id:'battery_kit',w:10,type:'battery'}
+    ]},
+  premium:{name:'Премиум',sub:'Топ-девайсы',price:2800,palette:pal('#6b21a8','#d6bcfa'),
+    drops:[{id:'vuse_alto',w:10},{id:'juul_c1',w:10},{id:'suorin_air',w:9},{id:'caliburn',w:8},{id:'vmate',w:7},
+      {id:'novo4',w:6},{id:'xros2',w:5},
+      {id:'smok_nord5',w:12},{id:'drag_nano',w:10},{id:'xros3',w:8},{id:'aegis_pod',w:5},{id:'squonk_x',w:3},
+      {id:'gen_pt80',w:3},{id:'rpm4',w:2},{id:'argus_gt2',w:1},
+      {id:'argus_pro',w:0.4},{id:'rpm5_pro',w:0.2},{id:'aegis_legend',w:0.1},{id:'centaurus',w:0.04},{id:'mech_pro',w:0.01}]},
+  elite:{name:'Элитный',sub:'Только топ',price:10000,palette:pal('#7f1d1d','#fbbf24'),tag:'hot',
+    drops:[{id:'argus_pro',w:14},{id:'rpm5_pro',w:12},{id:'aegis_legend',w:10},{id:'centaurus',w:14},
+      {id:'mech_pro',w:12},{id:'drag_x_pro',w:10},{id:'thelema',w:10},
+      {id:'drag5',w:8},{id:'centaurus_dna',w:5},{id:'titan_v2',w:3},{id:'asmodus',w:1.5},
+      {id:'odin_dna',w:0.4},{id:'hyperion_dna',w:0.1}]},
+  grand:{name:'Гранд',sub:'Только легенды',price:12000,palette:pal('#b45309','#fde047'),tag:'hot',
+    drops:[{id:'argus_pro',w:8},{id:'rpm5_pro',w:10},{id:'aegis_legend',w:12},{id:'centaurus',w:14},
+      {id:'mech_pro',w:12},{id:'drag_x_pro',w:10},{id:'thelema',w:9},
+      {id:'drag5',w:12},{id:'centaurus_dna',w:8},{id:'titan_v2',w:3},{id:'asmodus',w:1.5},
+      {id:'odin_dna',w:0.4},{id:'hyperion_dna',w:0.1}]},
+  imba:{name:'Имба-кейс',sub:'Мифические девайсы',price:35000,palette:pal('#7f1d1d','#fde047'),tag:'hot',
+    drops:[{id:'drag5',w:22},{id:'centaurus_dna',w:20},{id:'titan_v2',w:16},{id:'asmodus',w:12},
+      {id:'odin_dna',w:8},{id:'hyperion_dna',w:6},
+      {id:'xros_tester',w:10},{id:'alpha_test',w:4},{id:'first_pod',w:1.5},
+      {id:'hqd_founder',w:0.4},{id:'admin_edition',w:0.1}]},
+  absolute:{name:'АБСОЛЮТ',sub:'Только мифики и эксклюзивы',price:120000,palette:pal('#4c1d95','#fbbf24'),tag:'hot',
+    drops:[{id:'drag5',w:8},{id:'centaurus_dna',w:8},{id:'titan_v2',w:8},{id:'asmodus',w:7},
+      {id:'odin_dna',w:6},{id:'hyperion_dna',w:6},
+      {id:'xros_tester',w:20},{id:'alpha_test',w:15},{id:'first_pod',w:10},{id:'hqd_founder',w:7},{id:'admin_edition',w:3},
+      {id:'abs_ultimate',w:1},{id:'abs_grandmaster',w:0.7},{id:'abs_omnipotent',w:0.2},
+      {id:'abs_infinity',w:0.07},{id:'abs_admin',w:0.03}]},
+  admin_case:{name:'Админ-кейс',sub:'Только АБСОЛЮТ',price:300000,palette:pal('#7c2d12','#fef08a'),tag:'hot',
+    drops:[{id:'admin_edition',w:50},{id:'hqd_founder',w:20},
+      {id:'abs_ultimate',w:18},{id:'abs_grandmaster',w:8},
+      {id:'abs_omnipotent',w:3},{id:'abs_infinity',w:0.8},{id:'abs_admin',w:0.2}]}
+};
+
+const MISSIONS=[
+  {id:'open5',name:'Открой 5 кейсов',need:5,stat:'casesOpened',reward:300},
+  {id:'open25',name:'Открой 25 кейсов',need:25,stat:'casesOpened',reward:1500},
+  {id:'open100',name:'Открой 100 кейсов',need:100,stat:'casesOpened',reward:5000},
+  {id:'getEpic',name:'Получи эпик',need:1,stat:'epicGot',reward:500},
+  {id:'getLeg',name:'Получи легенду',need:1,stat:'legGot',reward:2000},
+  {id:'getMythic',name:'Получи МИФ',need:1,stat:'mythicGot',reward:5000},
+  {id:'getExclusive',name:'Получи эксклюзив',need:1,stat:'exclusiveGot',reward:10000},
+  {id:'upgradeWin',name:'Успешно улучши 3 раза',need:3,stat:'upWins',reward:800},
+  {id:'spend5k',name:'Потрать 5 000 П',need:5000,stat:'spent',reward:600},
+  {id:'puff100',name:'100 затяжек',need:100,stat:'puffs',reward:500},
+  {id:'puff1000',name:'1 000 затяжек',need:1000,stat:'puffs',reward:2000},
+  {id:'sell10',name:'Продай 10 вейпов',need:10,stat:'sold',reward:400},
+  {id:'stick5',name:'Наклей 5 наклеек',need:5,stat:'stickersUsed',reward:300}
+];
+const ACHIEVEMENTS=[
+  {id:'first',icon:'🎯',name:'Первый дроп'},
+  {id:'lvl5',icon:'⭐',name:'Уровень 5'},
+  {id:'lvl10',icon:'🌟',name:'Уровень 10'},
+  {id:'rich',icon:'💰',name:'10К П'},
+  {id:'rich50',icon:'💎',name:'50К П'},
+  {id:'epic',icon:'💜',name:'Эпик'},
+  {id:'legend',icon:'👑',name:'Легенда'},
+  {id:'mythic',icon:'🌌',name:'МИФ'},
+  {id:'exclusive',icon:'🔥',name:'Эксклюзив'},
+  {id:'collector',icon:'📦',name:'25 вейпов'},
+  {id:'puffer',icon:'💨',name:'100 затяжек'},
+  {id:'master',icon:'🎯',name:'1000 затяжек'},
+  {id:'garik',icon:'🚬',name:'Первый гарик'}
+];
+
+/* ==========================================================
+   STATE
+========================================================== */
+const SAVE_KEY='poddrop_save_v7';
+const defaultState=()=>({
+  balance:600,inventory:[],stickers:[],repairs:0,batteryKits:0,
+  currentVapeUid:null,xp:0,level:1,serialCounter:1000,
+  lastPuffAt:0,energy:100,usedReq:[],usedTopup:[],history:[],
+  stats:{casesOpened:0,epicGot:0,legGot:0,mythicGot:0,exclusiveGot:0,upWins:0,spent:0,sold:0,puffs:0,stickersUsed:0,gariks:0},
+  missions:{},achievements:{},lastDaily:0
+});
+let S=load();
+function load(){
+  try{const raw=localStorage.getItem(SAVE_KEY);if(!raw)return defaultState();
+    const d=JSON.parse(raw),def=defaultState();
+    return {...def,...d,stats:{...def.stats,...(d.stats||{})},missions:d.missions||{},achievements:d.achievements||{}};
+  }catch(e){return defaultState();}
+}
+function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){}}
+setInterval(save,3000);
+window.addEventListener('beforeunload',save);
+
+/* ==========================================================
+   SOUND — всё в try/catch
+========================================================== */
+let actx=null;
+function ensureAudio(){try{if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}
+function tone({freq=440,dur=.15,type='sine',vol=.05,attack=.01}={}){
+  try{
+    ensureAudio();if(!actx)return;
+    const t=actx.currentTime;
+    const o=actx.createOscillator(),g=actx.createGain(),f=actx.createBiquadFilter();
+    f.type='lowpass';f.frequency.value=3000;
+    o.type=type;o.frequency.value=freq;o.connect(f);f.connect(g);g.connect(actx.destination);
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(vol,t+attack);
+    g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    o.start(t);o.stop(t+dur+.05);
+  }catch(e){}
+}
+function noise(dur=.3,vol=.05,filterFreq=800){
+  try{
+    ensureAudio();if(!actx)return;
+    const t=actx.currentTime;
+    const bufferSize=Math.max(1,Math.floor(actx.sampleRate*dur));
+    const buffer=actx.createBuffer(1,bufferSize,actx.sampleRate);
+    const data=buffer.getChannelData(0);
+    for(let i=0;i<bufferSize;i++)data[i]=(Math.random()*2-1)*(1-i/bufferSize);
+    const src=actx.createBufferSource();src.buffer=buffer;
+    const g=actx.createGain();g.gain.value=vol;
+    const f=actx.createBiquadFilter();f.type='lowpass';f.frequency.value=filterFreq;
+    src.connect(f);f.connect(g);g.connect(actx.destination);
+    src.start(t);src.stop(t+dur);
+  }catch(e){}
+}
+const sndClick=()=>{try{tone({freq:280,dur:.05,vol:.03,attack:.003,type:'sine'});}catch(e){}};
+const sndCaseOpen=()=>{try{
+  noise(.15,.12,600);
+  tone({freq:90,dur:.25,vol:.08,attack:.005,type:'sine'});
+  tone({freq:180,dur:.2,vol:.05,attack:.005,type:'triangle'});
+  setTimeout(()=>tone({freq:140,dur:.5,vol:.04,attack:.05}),80);
+}catch(e){}};
+const sndTick=()=>{try{tone({freq:1200,dur:.02,vol:.02,attack:.002,type:'square'});}catch(e){}};
+const sndWin=()=>{try{
+  tone({freq:130,dur:.9,vol:.08,attack:.01,type:'triangle'});
+  [523,659,784].forEach((f,i)=>setTimeout(()=>tone({freq:f,dur:.5,vol:.06,attack:.02}),i*80));
+  setTimeout(()=>tone({freq:1046,dur:.9,vol:.05,attack:.03}),320);
+}catch(e){}};
+const sndLegend=()=>{try{
+  [392,523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone({freq:f,dur:.7,vol:.06,attack:.04}),i*90));
+  setTimeout(()=>noise(.4,.04,2000),500);
+}catch(e){}};
+const sndLose=()=>{try{tone({freq:180,dur:.5,vol:.06,type:'sawtooth',attack:.02});noise(.2,.05,400);}catch(e){}};
+const sndLvl=()=>{try{[392,523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone({freq:f,dur:.6,vol:.05,attack:.04}),i*90));}catch(e){}};
+const sndCoin=()=>{try{[1200,1600,2000].forEach((f,i)=>setTimeout(()=>tone({freq:f,dur:.12,vol:.04,attack:.003}),i*55));}catch(e){}};
+const sndPuff=()=>{try{noise(.25,.04,1200);tone({freq:220,dur:.25,vol:.03,attack:.08});}catch(e){}};
+
+/* ==========================================================
+   HELPERS
+========================================================== */
+const fmt=n=>Math.round(n).toLocaleString('ru-RU');
+const $=id=>document.getElementById(id);
+function toast(m,type){
+  try{
+    const t=$('toast');if(!t)return;
+    t.textContent=m;t.className='toast'+(type?' '+type:'');
+    t.classList.add('on');clearTimeout(t._tm);
+    t._tm=setTimeout(()=>t.classList.remove('on'),2200);
+  }catch(e){}
+}
+function pickW(drops){const t=drops.reduce((s,d)=>s+d.w,0);let r=Math.random()*t;
+  for(const d of drops){r-=d.w;if(r<=0)return d;}return drops[drops.length-1];}
+function hashMulti(str,rounds=6){
+  const bytes=new TextEncoder().encode(str);const out=[];
+  for(let r=0;r<rounds;r++){
+    let h=2166136261 ^ Math.imul(r+1,0x9e3779b9);
+    for(let i=0;i<bytes.length;i++){h^=bytes[i];h=Math.imul(h,16777619);h^=(h>>>13);}
+    out.push(h>>>0);
+  }
+  return out;
+}
+const B32='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+function bytesToB32(bytes){
+  let bits='';for(const b of bytes)bits+=b.toString(2).padStart(8,'0');
+  while(bits.length%5)bits+='0';let out='';
+  for(let i=0;i<bits.length;i+=5)out+=B32[parseInt(bits.slice(i,i+5),2)];
+  return out;
+}
+function b32ToBytes(str){
+  let bits='';for(const c of str){const i=B32.indexOf(c);if(i===-1)return null;bits+=i.toString(2).padStart(5,'0');}
+  const n=Math.floor(bits.length/8);const out=[];
+  for(let i=0;i<n*8;i+=8)out.push(parseInt(bits.slice(i,i+8),2));
+  return out;
+}
+const SECRET='POD_DROP_2026_v1_xK9mQ_v3';
+function makeSig(p){
+  const h=hashMulti(p+'|'+SECRET,6);const mix=h[2]^h[3]^h[4]^h[5];
+  const bytes=[((h[0]>>>24)&0xff)^((mix>>>24)&0xff),((h[0]>>>16)&0xff)^((mix>>>16)&0xff),
+    ((h[0]>>>8)&0xff)^((mix>>>8)&0xff),(h[0]&0xff)^(mix&0xff),
+    (h[1]>>>24)&0xff,(h[1]>>>16)&0xff,(h[1]>>>8)&0xff,h[1]&0xff];
+  return bytesToB32(bytes).slice(0,12);
+}
+
+/* ==========================================================
+   VAPE
+========================================================== */
+function createVape(modelId){
+  const variant=VARIANTS[Math.floor(Math.random()*VARIANTS.length)];
+  const battery=BATTERIES[Math.floor(Math.random()*BATTERIES.length)];
+  const flavor=FLAVORS[Math.floor(Math.random()*FLAVORS.length)];
+  S.serialCounter=(S.serialCounter||1000)+1;
+  return {uid:Date.now()+Math.random(),modelId,serial:S.serialCounter,
+    variantId:variant.id,battery,flavor,stickers:[],burnt:false,puffs:0,overheat:0};
+}
+function getVariant(v){return VARIANTS[v.variantId]||VARIANTS[0];}
+function getPalette(v){
+  const model=MODELS[v.modelId],variant=getVariant(v);
+  if(variant.main===null)return model.palette;
+  return pal(variant.main,variant.accent);
+}
+function computePrice(v){
+  const model=MODELS[v.modelId];if(!model)return 0;
+  const base=model.price||RARITY[model.rarity].base;
+  let stickerBonus=0;
+  v.stickers.forEach(uid=>{const st=S.stickers.find(x=>x.uid===uid);if(st)stickerBonus+=STICKERS[st.id].bonus;});
+  return Math.round((base+stickerBonus)*(BATTERY_MULT[v.battery]||1)*(v.burnt?0.4:1));
+}
+
+/* ==========================================================
+   XP
+========================================================== */
+function xpForLevel(l){return Math.round(100*Math.pow(1.35,l-1));}
+function addXP(n){
+  S.xp+=n;let ups=0;
+  while(S.xp>=xpForLevel(S.level)){S.xp-=xpForLevel(S.level);S.level++;ups++;}
+  if(ups>0){const b=S.level*200;S.balance+=b;sndLvl();toast(`⭐ Уровень ${S.level}! +${fmt(b)} П`,'good');checkAch();}
+  updateHeader();save();
+}
+function updateHeader(){
+  try{
+    $('lvlNum').textContent=S.level;
+    const need=xpForLevel(S.level);
+    $('xpTxt').textContent=`${S.xp}/${need}`;
+    $('xpBar').style.width=Math.min(100,S.xp/need*100)+'%';
+    $('bal').textContent=fmt(S.balance);
+  }catch(e){}
+}
+function updateBal(){$('bal').textContent=fmt(S.balance);}
+
+/* ==========================================================
+   CASES
+========================================================== */
+function renderCases(){
+  const g=$('casesGrid');if(!g)return;g.innerHTML='';
+  Object.entries(CASES).forEach(([id,c])=>{
+    const el=document.createElement('div');el.className='case';
+    if(c.tag){const t=document.createElement('div');t.className='tag '+(c.tag==='hot'?'hot':'new');
+      t.textContent=c.tag==='hot'?'ХИТ':'NEW';el.appendChild(t);}
+    el.appendChild(caseEl(c.palette,64,96));
+    const h=document.createElement('h3');h.textContent=c.name;
+    const s=document.createElement('div');s.className='sub';s.textContent=c.sub;
+    const p=document.createElement('div');p.className='p';p.textContent=fmt(c.price);
+    el.append(h,s,p);
+    el.onclick=()=>openCaseModal(id);
+    g.appendChild(el);
+  });
+}
+
+/* ==========================================================
+   CASE MODAL
+========================================================== */
+function openCaseModal(cid){
+  const c=CASES[cid];
+  const ov=$('ov'),box=$('ovContent');
+  if(!ov||!box)return;
+  ov.classList.add('on');
+  sndClick();
+
+  const groups={};
+  c.drops.forEach(d=>{
+    let k;
+    if(d.type==='sticker') k='sticker_'+STICKERS[d.id.replace('sticker_','')].rarity;
+    else if(d.type==='repair') k='repair';
+    else if(d.type==='battery') k='battery';
+    else k=MODELS[d.id].rarity;
+    groups[k]=(groups[k]||0)+d.w;
+  });
+  const total=Object.values(groups).reduce((a,b)=>a+b,0);
+  const order=['absolute','exclusive','mythic','legendary','epic','rare','uncommon','common',
+    'sticker_legendary','sticker_epic','sticker_rare','sticker_uncommon','sticker_common',
+    'repair','battery'];
+  const colors={absolute:'#fde047',exclusive:'#f43f5e',mythic:'#c084fc',legendary:'#fbbf24',epic:'#a78bfa',
+    rare:'#60a5fa',uncommon:'#4ade80',common:'#94a3b8',
+    sticker_legendary:'#fbbf24',sticker_epic:'#a78bfa',sticker_rare:'#60a5fa',
+    sticker_uncommon:'#4ade80',sticker_common:'#94a3b8',
+    repair:'#60a5fa',battery:'#a78bfa'};
+  const names={repair:'Ремонт',battery:'Батарея',
+    sticker_common:'Накл. обычные',sticker_uncommon:'Накл. необычные',
+    sticker_rare:'Накл. редкие',sticker_epic:'Накл. эпические',
+    sticker_legendary:'Накл. легендарные'};
+
+  let barHtml='';
+  order.forEach(k=>{if(groups[k])barHtml+=`<div style="width:${groups[k]/total*100}%;background:${colors[k]}"></div>`;});
+
+  let ratesInline='';
+  order.forEach(k=>{
+    if(!groups[k])return;
+    const n=names[k]||RARITY[k].name;
+    const p=Math.round(groups[k]/total*1000)/10;
+    ratesInline+=`<span style="display:inline-flex;align-items:center;gap:4px;
+      font-size:10.5px;font-weight:700;color:${colors[k]}">
+      <span style="width:6px;height:6px;border-radius:50%;background:${colors[k]};display:inline-block"></span>
+      ${n} ${p}%</span>`;
+  });
+
+  const canAfford=S.balance>=c.price;
+  const canAfford5=S.balance>=c.price*5;
+
+  box.innerHTML=`
+    <div class="modal-card" style="--vglow:${c.palette.accent}22;max-width:340px">
+      <button class="modal-close" id="cmClose">✕</button>
+      <div id="cmArt" style="text-align:center;margin-bottom:4px"></div>
+      <div style="font-size:16px;font-weight:900;text-align:center;letter-spacing:-.3px">${c.name}</div>
+      <div style="font-size:11px;color:var(--dim);text-align:center;margin-bottom:10px">${c.sub}</div>
+      <div style="height:5px;border-radius:3px;overflow:hidden;display:flex;margin-bottom:8px">${barHtml}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px 12px;justify-content:center;margin-bottom:12px">${ratesInline}</div>
+      <div class="cm-items" id="cmItems"></div>
+      <div class="rm-actions" style="margin-top:12px">
+        <button class="btn gold full" id="cmOpen" ${canAfford?'':'disabled'} style="padding:11px">ОТКРЫТЬ ЗА ${fmt(c.price)} П</button>
+        <button class="btn ghost full" id="cmOpen5" ${canAfford5?'':'disabled'} style="padding:9px;font-size:12.5px">×5 — ${fmt(c.price*5)} П</button>
+      </div>
+    </div>`;
+
+  $('cmArt').appendChild(caseEl(c.palette,80,120));
+
+  const itemsBox=$('cmItems');
+  c.drops.forEach(d=>{
+    const el=document.createElement('div');
+    el.className='cm-item';
+    if(d.type==='sticker'){
+      const st=STICKERS[d.id.replace('sticker_','')];
+      const ic=document.createElement('div');
+      ic.style.cssText='font-size:28px;line-height:1;padding-top:10px';
+      ic.textContent=st.icon;
+      el.appendChild(ic);
+    } else if(d.type==='repair'){
+      const ic=document.createElement('div');
+      ic.style.cssText='font-size:26px;line-height:1;padding-top:12px';
+      ic.textContent='🔧';
+      el.appendChild(ic);
+    } else if(d.type==='battery'){
+      const ic=document.createElement('div');
+      ic.style.cssText='font-size:26px;line-height:1;padding-top:12px';
+      ic.textContent='🔋';
+      el.appendChild(ic);
+    } else {
+      const m=MODELS[d.id];
+      el.appendChild(spriteEl({sprite:m.sprite,palette:m.palette},40,56));
+    }
+    const pc=document.createElement('div');
+    pc.className='pc';
+    pc.textContent=Math.round(d.w/total*1000)/10+'%';
+    el.appendChild(pc);
+    itemsBox.appendChild(el);
+  });
+
+  $('cmClose').onclick=()=>{ov.classList.remove('on');sndClick();};
+  if(canAfford)$('cmOpen').onclick=()=>{ov.classList.remove('on');openCase(cid,1);};
+  if(canAfford5)$('cmOpen5').onclick=()=>{ov.classList.remove('on');openCase(cid,5);};
+}
+
+/* ==========================================================
+   OPEN CASE — гарантированный результат
+========================================================== */
+let spinning=false,currentCase=null;
+function openCase(cid,count=1){
+  if(spinning)return;
+  const c=CASES[cid];
+  const totalPrice=c.price*count;
+  if(S.balance<totalPrice){toast('Недостаточно П','bad');return;}
+  S.balance-=totalPrice;S.stats.spent+=totalPrice;S.stats.casesOpened+=count;
+  updateHeader();renderCases();save();
+  sndCaseOpen();
+  currentCase=cid;spinning=true;
+
+  const ov=$('ov'),box=$('ovContent');
+  if(!ov||!box){spinning=false;return;}
+  ov.classList.add('on');
+
+  if(count===1){
+    box.innerHTML=`<div style="width:100%;max-width:640px;display:flex;flex-direction:column;
+      align-items:center;gap:14px">
+      <div class="reel-win"><div class="marker"></div><div class="reel" id="reel"></div></div>
+      <div id="resultSlot" style="width:100%;display:flex;justify-content:center"></div>
+    </div>`;
+
+    const reel=$('reel');
+    if(!reel){finishOpenCase(cid,pickW(c.drops),box);return;}
+    const TOTAL=60,WINNER=52,IW=84,GAP=6;
+    const winnerDrop=pickW(c.drops);
+
+    reel.style.transition='none';
+    reel.style.transform='translateX(0)';
+    reel.innerHTML='';
+    for(let i=0;i<TOTAL;i++){
+      const d=(i===WINNER)?winnerDrop:pickW(c.drops);
+      const el=document.createElement('div');el.className='ri';
+      let color='#94a3b8',label='',sprite;
+      if(d.type==='sticker'){
+        const st=STICKERS[d.id.replace('sticker_','')];
+        color=RARITY[st.rarity].color;label=st.name;
+        sprite=document.createElement('div');
+        sprite.style.cssText='font-size:38px;line-height:1';
+        sprite.textContent=st.icon;
+      } else if(d.type==='repair'){
+        color='#60a5fa';label='Ремкомплект';
+        sprite=document.createElement('div');
+        sprite.style.cssText='font-size:34px;line-height:1';
+        sprite.textContent='🔧';
+      } else if(d.type==='battery'){
+        color='#a78bfa';label='Батарея';
+        sprite=document.createElement('div');
+        sprite.style.cssText='font-size:34px;line-height:1';
+        sprite.textContent='🔋';
+      } else {
+        const item=MODELS[d.id];
+        color=RARITY[item.rarity].color;label=item.name;
+        sprite=spriteEl(item,60,90);
+      }
+      el.style.borderColor=color+'66';
+      el.appendChild(sprite);
+      const nm=document.createElement('span');nm.textContent=label;el.appendChild(nm);
+      reel.appendChild(el);
+    }
+
+    const containerW=reel.parentElement.clientWidth;
+    const step=IW+GAP,jit=(Math.random()*.62-.31)*IW;
+    const tgt=WINNER*step+IW/2-containerW/2+jit;
+    void reel.offsetWidth;
+
+    let tickCount=0;
+    const tickInt=setInterval(()=>{
+      if(tickCount>28){try{clearInterval(tickInt);}catch(e){}return;}
+      sndTick();tickCount++;
+    },120);
+
+    let done=false;
+    const finish=()=>{
+      if(done)return;done=true;spinning=false;
+      try{clearInterval(tickInt);}catch(e){}
+      finishOpenCase(cid,winnerDrop,box);
+    };
+
+    try{
+      reel.style.transition='transform 5.2s cubic-bezier(0.12,0.82,0.18,1)';
+      reel.style.transform=`translateX(${-tgt}px)`;
+    }catch(e){}
+
+    setTimeout(finish,5800);
+    setTimeout(finish,7500);
+  } else {
+    const results=[];
+    for(let i=0;i<count;i++)results.push(grantDrop(pickW(c.drops)));
+    spinning=false;
+    try{showMultiResult(results,cid);}catch(e){
+      console.error(e);
+      box.innerHTML=`<div class="modal-card" style="text-align:center">
+        <div style="font-weight:800;margin-bottom:10px">Готово ×${count}</div>
+        <button class="btn ghost full" onclick="document.getElementById('ov').classList.remove('on')">Закрыть</button>
+      </div>`;
+    }
+  }
+}
+
+function finishOpenCase(cid,winnerDrop,box){
+  let res;
+  try{ res=grantDrop(winnerDrop); }
+  catch(e){
+    console.error('grantDrop fail',e);
+    res={type:'vape',vape:createVape('hqd_cuvie')};
+  }
+
+  box.innerHTML=`<div style="width:100%;display:flex;justify-content:center;align-items:center;min-height:50vh">
+    <div id="resultSlot" style="width:100%;display:flex;justify-content:center"></div>
+  </div>`;
+
+  try{
+    showResult(res,cid);
+  }catch(err){
+    console.error('showResult fail',err);
+    const slot=$('resultSlot');
+    if(slot){
+      slot.innerHTML=`<div class="modal-card" style="text-align:center">
+        <div style="font-size:16px;font-weight:800;margin-bottom:8px">Готово!</div>
+        <div style="font-size:12px;color:var(--dim);margin-bottom:14px">${(err&&err.message)||'Ошибка отображения'}</div>
+        <button class="btn ghost full" onclick="document.getElementById('ov').classList.remove('on')">Закрыть</button>
+      </div>`;
+    }
+  }
+}
+
+function grantDrop(d){
+  try{
+    if(d.type==='sticker'){
+      const stId=d.id.replace('sticker_','');
+      S.stickers.push({id:stId,uid:Date.now()+Math.random()+Math.random()});
+      return {type:'sticker',stId};
+    }
+    if(d.type==='repair'){S.repairs++;return {type:'repair'};}
+    if(d.type==='battery'){S.batteryKits++;return {type:'battery'};}
+    const v=createVape(d.id);
+    S.inventory.unshift(v);
+    const rar=MODELS[d.id].rarity;
+    if(rar==='epic')S.stats.epicGot++;
+    if(rar==='legendary')S.stats.legGot++;
+    if(rar==='mythic')S.stats.mythicGot++;
+    if(rar==='exclusive')S.stats.exclusiveGot++;
+    if(!S.achievements.first){S.achievements.first=true;unlockToast('🎯','Первый дроп');}
+    if(rar==='epic'&&!S.achievements.epic){S.achievements.epic=true;unlockToast('💜','Эпик');}
+    if(rar==='legendary'&&!S.achievements.legend){S.achievements.legend=true;unlockToast('👑','Легенда');}
+    if(rar==='mythic'&&!S.achievements.mythic){S.achievements.mythic=true;unlockToast('🌌','МИФ');}
+    if(rar==='exclusive'&&!S.achievements.exclusive){S.achievements.exclusive=true;unlockToast('🔥','Эксклюзив');}
+    if(S.inventory.length>=25&&!S.achievements.collector){S.achievements.collector=true;unlockToast('📦','25 вейпов');}
+    addXP(RARITY[rar].xp);
+    checkAch();
+    return {type:'vape',vape:v};
+  }catch(e){
+    console.error('grantDrop error',e);
+    return {type:'repair'};
+  }
+}
+
+function showResult(res,cid){
+  const slot=$('resultSlot');
+  if(!slot){console.warn('resultSlot не найден');return;}
+  slot.innerHTML='';
+  const card=document.createElement('div');
+  card.className='modal-card';
+
+  if(res.type==='sticker'){
+    const st=STICKERS[res.stId],r=RARITY[st.rarity];
+    card.style.setProperty('--vglow',r.color+'44');
+    card.innerHTML=`
+      <div class="rm-head">
+        <div class="rm-rarity" style="color:${r.color};border-color:${r.color}66">${r.name}</div>
+        <div class="rm-payout profit">+${st.bonus} к цене</div>
+      </div>
+      <div class="rm-art" style="--rglow:${r.color}66"><div style="font-size:96px;line-height:1;position:relative;z-index:1">${st.icon}</div></div>
+      <div class="rm-name">${st.name}</div>
+      <div class="rm-sub" style="color:${r.color}">Наклейка</div>
+      <div class="rm-actions">
+        <button class="btn gold full" id="resAgain">ОТКРЫТЬ ЕЩЁ (${fmt(CASES[cid].price)} П)</button>
+        <button class="btn ghost full" id="resKeep">Забрать в инвентарь</button>
+      </div>`;
+    sndWin();
+  } else if(res.type==='repair'||res.type==='battery'){
+    const isR=res.type==='repair';
+    card.style.setProperty('--vglow','rgba(96,165,250,.3)');
+    card.innerHTML=`
+      <div class="rm-head">
+        <div class="rm-rarity" style="color:#60a5fa;border-color:#60a5fa66">Расходник</div>
+      </div>
+      <div class="rm-art" style="--rglow:rgba(96,165,250,.5)"><div style="font-size:96px;line-height:1;position:relative;z-index:1">${isR?'🔧':'🔋'}</div></div>
+      <div class="rm-name">${isR?'Ремкомплект':'Батарейный набор'}</div>
+      <div class="rm-sub" style="color:var(--dim)">${isR?'Починит вейп от гарика':'Улучшит батарею'}</div>
+      <div class="rm-actions">
+        <button class="btn gold full" id="resAgain">ОТКРЫТЬ ЕЩЁ (${fmt(CASES[cid].price)} П)</button>
+        <button class="btn ghost full" id="resKeep">Забрать в инвентарь</button>
+      </div>`;
+  } else {
+    const v=res.vape;
+    const model=MODELS[v.modelId],r=RARITY[model.rarity],variant=getVariant(v);
+    const price=computePrice(v);
+    const payout=(price/CASES[cid].price).toFixed(1);
+    const isProfit=price>CASES[cid].price;
+    const isEven=Math.abs(price-CASES[cid].price)<50;
+    card.style.setProperty('--vglow',r.color+'44');
+    card.innerHTML=`
+      <div class="rm-head">
+        <div class="rm-rarity" style="color:${r.color};border-color:${r.color}66">${r.name}</div>
+        <div class="rm-payout ${isProfit?'profit':isEven?'even':'loss'}">x${payout} ОКУП</div>
+      </div>
+      <div class="rm-art" id="rmArt" style="--rglow:${r.color}99"></div>
+      <div class="rm-name">${model.name}</div>
+      <div class="rm-sub" style="color:${r.color}">#${String(v.serial).padStart(4,'0')} · ${variant.name} · ${v.flavor}</div>
+      <div class="rm-price"><div class="v">${fmt(price)}</div></div>
+      <div class="rm-actions">
+        <button class="btn gold full" id="resAgain">ОТКРЫТЬ ЕЩЁ (${fmt(CASES[cid].price)} П)</button>
+        <button class="btn green full" id="resSell">ПРОДАТЬ ЗА ${fmt(price)} П</button>
+        <button class="btn ghost full" id="resKeep">Забрать в инвентарь</button>
+      </div>`;
+    const art=card.querySelector('#rmArt');
+if(art)art.appendChild(spriteEl({sprite:model.sprite,palette:getPalette(v)},130,190));
+
+    try{
+      if(r.name==='Легендарный'||r.name==='МИФ'||r.name==='ЭКСКЛЮЗИВ')sndLegend();
+      else if(r.name==='Эпический'||r.name==='Редкий')sndWin();
+      else sndCoin();
+    }catch(e){}
+
+    const sellBtn=card.querySelector('#resSell');
+    if(sellBtn)sellBtn.onclick=()=>{
+      const i=S.inventory.findIndex(x=>x.uid===v.uid);
+      if(i!==-1){S.inventory.splice(i,1);S.balance+=price;S.stats.sold++;
+        updateBal();renderInv();renderCases();checkMissions();
+        toast('+'+fmt(price)+' П','good');sndCoin();save();}
+      const ov=$('ov');if(ov)ov.classList.remove('on');
+    };
+  }
+
+  const againBtn=card.querySelector('#resAgain');
+  if(againBtn)againBtn.onclick=()=>{
+    const ov=$('ov');if(ov)ov.classList.remove('on');
+    setTimeout(()=>openCase(cid,1),120);
+  };
+  const keepBtn=card.querySelector('#resKeep');
+  if(keepBtn)keepBtn.onclick=()=>{
+    const ov=$('ov');if(ov)ov.classList.remove('on');
+    renderInv();renderVape();
+  };
+
+  slot.appendChild(card);
+  renderInv();checkMissions();save();
+}
+
+function showMultiResult(results,cid){
+  const box=$('ovContent');
+  let totalValue=0;
+  results.forEach(r=>{
+    if(r.type==='vape')totalValue+=computePrice(r.vape);
+    if(r.type==='sticker')totalValue+=STICKERS[r.stId].bonus;
+  });
+  const paid=CASES[cid].price*results.length;
+  const payout=(totalValue/paid).toFixed(1);
+  const isProfit=totalValue>paid;
+
+  box.innerHTML=`
+    <div class="modal-card" style="max-width:520px">
+      <div class="rm-head">
+        <div class="rm-rarity" style="color:var(--accent2);border-color:var(--accent)">x${results.length} открытий</div>
+        <div class="rm-payout ${isProfit?'profit':'loss'}">x${payout} ОКУП</div>
+      </div>
+      <div id="multiGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(85px,1fr));gap:6px;margin:14px 0"></div>
+      <div class="rm-price"><div class="v">${fmt(totalValue)}</div></div>
+      <div class="rm-actions">
+        <button class="btn gold full" id="multiAgain">ОТКРЫТЬ ЕЩЁ ×${results.length} (${fmt(paid)} П)</button>
+        <button class="btn ghost full" id="multiKeep">Забрать всё</button>
+      </div>
+    </div>`;
+  const grid=$('multiGrid');
+  results.forEach(res=>{
+    const el=document.createElement('div');
+    el.style.cssText='text-align:center;position:relative';
+    if(res.type==='vape'){
+      const model=MODELS[res.vape.modelId],r=RARITY[model.rarity];
+      el.style.border='1.5px solid '+r.color+'44';
+      el.style.borderRadius='10px';el.style.padding='6px';el.style.background='var(--panel2)';
+      el.appendChild(spriteEl({sprite:model.sprite,palette:getPalette(res.vape)},56,84));
+      const nm=document.createElement('div');
+      nm.style.cssText='font-size:9px;color:var(--dim);margin-top:3px;font-weight:700;line-height:1.1;max-height:22px;overflow:hidden';
+      nm.textContent=model.name;el.appendChild(nm);
+    } else if(res.type==='sticker'){
+      const st=STICKERS[res.stId];
+      el.innerHTML=`<div style="font-size:44px;line-height:1">${st.icon}</div>`;
+    } else if(res.type==='repair'){
+      el.innerHTML=`<div style="font-size:44px;line-height:1">🔧</div>`;
+    } else {
+      el.innerHTML=`<div style="font-size:44px;line-height:1">🔋</div>`;
+    }
+    grid.appendChild(el);
+  });
+  $('multiAgain').onclick=()=>{
+    const ov=$('ov');if(ov)ov.classList.remove('on');
+    setTimeout(()=>openCase(cid,results.length),120);
+  };
+  $('multiKeep').onclick=()=>{const ov=$('ov');if(ov)ov.classList.remove('on');};
+
+  sndLegend();
+  renderInv();checkMissions();save();
+}
+
+function unlockToast(ic,name){toast(`${ic} ${name}`,'good');try{tone({freq:880,dur:.3,vol:.04});setTimeout(()=>tone({freq:1175,dur:.4,vol:.035}),120);}catch(e){}}
+function checkAch(){
+  if(S.level>=5&&!S.achievements.lvl5){S.achievements.lvl5=true;unlockToast('⭐','Уровень 5');}
+  if(S.level>=10&&!S.achievements.lvl10){S.achievements.lvl10=true;unlockToast('🌟','Уровень 10');}
+  if(S.balance>=10000&&!S.achievements.rich){S.achievements.rich=true;unlockToast('💰','10К');}
+  if(S.balance>=50000&&!S.achievements.rich50){S.achievements.rich50=true;unlockToast('💎','50К');}
+  if((S.stats.puffs||0)>=100&&!S.achievements.puffer){S.achievements.puffer=true;unlockToast('💨','100 затяжек');}
+  if((S.stats.puffs||0)>=1000&&!S.achievements.master){S.achievements.master=true;unlockToast('🎯','1000 затяжек');}
+  if((S.stats.gariks||0)>=1&&!S.achievements.garik){S.achievements.garik=true;unlockToast('🚬','Первый гарик');}
+  renderAch();
+}
+
+/* ==========================================================
+   INVENTORY
+========================================================== */
+function renderInv(){
+  const g=$('invGrid');if(!g)return;g.innerHTML='';
+  $('sItems').textContent=S.inventory.length;
+  $('sValue').textContent=fmt(S.inventory.reduce((s,v)=>s+computePrice(v),0));
+  $('sStickers').textContent=S.stickers.length;
+  $('sRepairs').textContent=S.repairs;
+  $('sBatKits').textContent=S.batteryKits;
+  if(!S.inventory.length){
+    g.innerHTML='<div class="empty-msg"><div class="ico">📦</div><div>Инвентарь пуст — открой кейс</div></div>';
+    return;
+  }
+  S.inventory.forEach(v=>{
+    const model=MODELS[v.modelId],r=RARITY[model.rarity];
+    const el=document.createElement('div');
+    el.className='inv'+(S.currentVapeUid===v.uid?' cur':'');
+    el.onclick=()=>{S.currentVapeUid=v.uid;save();renderInv();renderVape();switchTab('vVape');};
+    if(v.burnt){const b=document.createElement('div');b.className='burnt';b.textContent='🔥';el.appendChild(b);}
+    el.appendChild(spriteEl({sprite:model.sprite,palette:getPalette(v)},64,96));
+    const nm=document.createElement('div');nm.className='nm';nm.textContent=model.name;el.appendChild(nm);
+    const ser=document.createElement('div');ser.className='serial';ser.textContent='#'+String(v.serial).padStart(4,'0');el.appendChild(ser);
+    const ra=document.createElement('div');ra.className='rar';ra.style.color=r.color;ra.textContent=r.name;el.appendChild(ra);
+    const st=document.createElement('div');st.className='st-line';
+    v.stickers.slice(0,3).forEach(uid=>{
+      const sticker=S.stickers.find(x=>x.uid===uid);
+      if(sticker)st.textContent+=STICKERS[sticker.id].icon;
+    });
+    el.appendChild(st);
+    const pr=document.createElement('div');pr.className='val';pr.textContent=fmt(computePrice(v));el.appendChild(pr);
+    const act=document.createElement('div');act.className='act';
+    const sellBtn=document.createElement('button');sellBtn.className='sell-btn';sellBtn.textContent='Продать';
+    sellBtn.onclick=(e)=>{e.stopPropagation();sellItem(v.uid);};
+    act.appendChild(sellBtn);
+    el.appendChild(act);
+    g.appendChild(el);
+  });
+}
+function sellItem(uid){
+  const idx=S.inventory.findIndex(x=>x.uid===uid);if(idx===-1)return;
+  const v=S.inventory[idx],price=computePrice(v);
+  if(!confirm(`Продать ${MODELS[v.modelId].name} за ${fmt(price)} П?\nНаклейки уйдут с ним.`))return;
+  if(S.currentVapeUid===v.uid)S.currentVapeUid=null;
+  S.inventory.splice(idx,1);S.balance+=price;S.stats.sold++;
+  updateBal();renderInv();renderCases();checkMissions();renderVape();
+  toast('+'+fmt(price)+' П','good');sndCoin();save();
+}
+function sellAll(){
+  if(!S.inventory.length){toast('Пусто','bad');return;}
+  const toSell=S.inventory.filter(v=>v.uid!==S.currentVapeUid);
+  if(!toSell.length){toast('Все вейпы оставлены','bad');return;}
+  const total=toSell.reduce((s,v)=>s+computePrice(v),0);
+  if(!confirm(`Продать ${toSell.length} вейпов за ${fmt(total)} П?\nТекущий останется.`))return;
+  S.inventory=S.inventory.filter(v=>v.uid===S.currentVapeUid);
+  S.balance+=total;S.stats.sold+=toSell.length;
+  updateBal();renderInv();renderCases();checkMissions();renderVape();
+  toast('Продано: +'+fmt(total)+' П','good');sndCoin();save();
+}
+
+/* ==========================================================
+   MY VAPE
+========================================================== */
+function renderVape(){
+  const box=$('vapeBox');if(!box)return;
+  const v=S.inventory.find(x=>x.uid===S.currentVapeUid);
+  if(!v){box.innerHTML='<div class="empty-msg"><div class="ico">🎒</div><div>Кликни по вейпу в инвентаре</div></div>';return;}
+  const model=MODELS[v.modelId],r=RARITY[model.rarity],variant=getVariant(v);
+  const price=computePrice(v);
+  const overheatPct=Math.min(100,(v.overheat/30)*100);
+  const canUpgBattery=v.battery<2000&&S.batteryKits>0;
+  box.innerHTML=`
+    <div class="vape-layout">
+      <div>
+        <div class="vape-hero" style="--vglow:${r.color}33">
+          <div class="vrar" style="color:${r.color}">${r.name}</div>
+          <div class="canvas-wrap" id="cwrap"></div>
+          <div class="vname">${model.name}</div>
+          <div class="vserial">#${String(v.serial).padStart(4,'0')} · ${variant.name} · ${v.flavor}</div>
+          <div class="actions">
+            <button class="btn sm ${v.burnt?'ghost':''}" id="puffBtn" ${v.burnt?'disabled':''}>💨 Затянуться</button>
+            <button class="btn ghost sm" id="shareBtn">📤 Показать</button>
+            ${v.burnt?`<button class="btn gold sm" id="repairBtn">🔧 Починить (${S.repairs>0?'комплект':'500 П'})</button>`:''}
+            ${canUpgBattery?'<button class="btn ghost sm" id="upgBatBtn">🔋 Улучшить</button>':''}
+          </div>
+          <div class="bar-wrap">
+            <div class="bar-lbl"><span>Энергия</span><span id="energyTxt">${Math.round(S.energy)}%</span></div>
+            <div class="bar"><div class="bar-fill energy" id="energyFill" style="width:${S.energy}%"></div></div>
+            <div class="bar-lbl ${v.overheat>10?'hot':''} ${v.overheat>=15?'warn-pulse':''}" id="ohLbl" style="margin-top:12px">
+              <span>Перегрев</span><span id="ohTxt">${v.overheat}/30</span>
+            </div>
+            <div class="bar"><div class="bar-fill heat" id="ohFill" style="width:${overheatPct}%"></div></div>
+          </div>
+        </div>
+        <div class="srow" style="margin-top:12px">
+          <div class="lbl"><span>Наклейки</span><span style="color:var(--dim);font-weight:700">${v.stickers.length}/3</span></div>
+          <div class="sticker-slots" id="slots"></div>
+          <div style="font-size:11.5px;color:var(--dim);margin-top:10px">В коллекции: <b style="color:var(--txt)">${S.stickers.length}</b></div>
+        </div>
+      </div>
+      <div class="side-stats">
+        <div class="srow"><div class="lbl"><span>Цена</span></div><div class="price-big">${fmt(price)}</div></div>
+        <div class="srow">
+          <div class="lbl"><span>Характеристики</span></div>
+          <div class="kv">
+            <div><span class="k">Батарея</span><b>${v.battery} мАч</b> <span style="color:var(--dim)">×${BATTERY_MULT[v.battery]}</span></div>
+            <div><span class="k">Вкус</span><b>${v.flavor}</b></div>
+            <div><span class="k">Цвет</span><b>${variant.name}</b></div>
+            <div><span class="k">Затяжек</span><b>${v.puffs}</b></div>
+            <div><span class="k">Состояние</span><b style="color:${v.burnt?'var(--red)':'var(--green)'}">${v.burnt?'🔥 Горелый':'✓ Норм'}</b></div>
+          </div>
+        </div>
+        <div class="srow">
+          <div class="lbl"><span>За затяжку</span></div>
+          <div style="font-size:18px;font-weight:800;color:var(--gold);font-variant-numeric:tabular-nums">+${Math.max(1,Math.floor(price/200))} П</div>
+        </div>
+        <div class="srow" style="padding:10px">
+          <div style="font-size:11.5px;color:var(--dim);line-height:1.6">
+            🔧 Ремонтов: <b style="color:var(--txt)">${S.repairs}</b><br>
+            🔋 Батарей: <b style="color:var(--txt)">${S.batteryKits}</b>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  const wrap=$('cwrap');
+  wrap.appendChild(spriteEl({sprite:model.sprite,palette:getPalette(v)},160,230));
+  const ovl=document.createElement('div');ovl.className='sticker-overlay';
+  const positions=[{top:'12%',left:'62%'},{top:'45%',left:'14%'},{top:'72%',left:'66%'}];
+  v.stickers.forEach((uid,i)=>{
+    const sticker=S.stickers.find(x=>x.uid===uid);if(!sticker)return;
+    const s=document.createElement('span');s.className='st';
+    const pos=positions[i%3];s.style.top=pos.top;s.style.left=pos.left;
+    s.textContent=STICKERS[sticker.id].icon;ovl.appendChild(s);
+  });
+  wrap.appendChild(ovl);
+  const slots=$('slots');
+  for(let i=0;i<3;i++){
+    const slot=document.createElement('div');
+    const uid=v.stickers[i];
+    if(uid){
+      const sticker=S.stickers.find(x=>x.uid===uid);
+      slot.className='slot filled';slot.textContent=sticker?STICKERS[sticker.id].icon:'?';
+      const rm=document.createElement('span');rm.className='rm';rm.textContent='✕';
+      rm.onclick=(e)=>{e.stopPropagation();if(sticker){
+        S.stickers.push({id:sticker.id,uid:sticker.uid});v.stickers.splice(i,1);
+        S.stats.stickersUsed=Math.max(0,(S.stats.stickersUsed||0)-1);
+        save();renderVape();renderInv();toast('Наклейка снята');}};
+      slot.appendChild(rm);
+    } else {slot.className='slot';slot.textContent='+';slot.onclick=openStickerPicker;}
+    slots.appendChild(slot);
+  }
+  $('puffBtn').onclick=()=>doPuff(v);
+  $('shareBtn').onclick=()=>openShare(v);
+  if($('repairBtn'))$('repairBtn').onclick=()=>doRepair(v);
+  if($('upgBatBtn'))$('upgBatBtn').onclick=()=>upgradeBattery(v);
+}
+function doPuff(v){
+  const now=Date.now(),sinceLast=now-(S.lastPuffAt||0);
+  if(S.energy<5){toast('Мало энергии','bad');return;}
+  S.energy-=5;
+  if(sinceLast<2500)v.overheat=Math.min(30,v.overheat+1);
+  S.lastPuffAt=now;
+  const chance=[0,0,0,0,0,0,0,0,0,0,0.06,0.06,0.06,0.06,0.06,0.18,0.18,0.18,0.18,0.18,0.35,0.35,0.35,0.35,0.35,0.4,0.4,0.4,0.4,0.4][v.overheat]||0;
+  if(v.overheat>=30||Math.random()<chance){
+    v.burnt=true;v.overheat=0;S.stats.gariks=(S.stats.gariks||0)+1;
+    checkMissions();checkAch();
+    toast('🔥 Гарик!','bad');sndLose();
+    save();renderVape();renderInv();return;
+  }
+  const base=Math.max(1,Math.floor(computePrice(v)/200));
+  S.balance+=base;v.puffs++;S.stats.puffs=(S.stats.puffs||0)+1;
+  updateBal();checkMissions();checkAch();save();
+  const eF=$('energyFill'),eT=$('energyTxt'),oF=$('ohFill'),oT=$('ohTxt'),oL=$('ohLbl');
+  if(eF){eF.style.width=S.energy+'%';eT.textContent=Math.round(S.energy)+'%';}
+  if(oF){const p=Math.min(100,(v.overheat/30)*100);oF.style.width=p+'%';oT.textContent=v.overheat+'/30';
+    oL.classList.toggle('hot',v.overheat>10);oL.classList.toggle('warn-pulse',v.overheat>=15);}
+  sndPuff();toast('+'+base+' П','good');
+}
+function doRepair(v){
+  if(S.repairs>0){S.repairs--;v.burnt=false;v.overheat=0;save();renderVape();renderInv();toast('🔧 Починен','good');}
+  else if(S.balance>=500){S.balance-=500;v.burnt=false;v.overheat=0;updateBal();save();renderVape();renderInv();toast('🔧 Починен','good');}
+  else toast('Мало П','bad');
+}
+function upgradeBattery(v){
+  if(S.batteryKits<=0)return;
+  if(v.battery>=2000){toast('Максимум','bad');return;}
+  const cur=BATTERY_LEVELS.indexOf(v.battery),next=BATTERY_LEVELS[cur+1];
+  if(next===undefined)return;
+  S.batteryKits--;v.battery=next;
+  save();renderVape();renderInv();toast('🔋 Батарея: '+next+' мАч','good');sndCoin();
+}
+
+/* ==========================================================
+   STICKER PICKER
+========================================================== */
+function openStickerPicker(){
+  const v=S.inventory.find(x=>x.uid===S.currentVapeUid);
+  if(!v)return;
+  if(v.stickers.length>=3){toast('Максимум 3','bad');return;}
+  const ov=$('ov'),box=$('ovContent');if(!ov||!box)return;ov.classList.add('on');
+  const modal=document.createElement('div');modal.className='modal-card';modal.style.maxWidth='400px';
+  modal.innerHTML=`<button class="modal-close" id="spClose">✕</button>
+    <h3 style="font-size:14px;font-weight:800;margin-bottom:12px">Выбрать наклейку</h3>`;
+  const gr={};S.stickers.forEach(s=>{(gr[s.id]=gr[s.id]||[]).push(s);});
+  const ids=Object.keys(gr).sort((a,b)=>STICKERS[b].bonus-STICKERS[a].bonus);
+  const list=document.createElement('div');list.style.cssText='display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow-y:auto';
+  if(!ids.length)list.innerHTML='<div style="text-align:center;color:var(--dim);padding:20px 0;font-size:13px">Нет наклеек — открой «Мастерскую»</div>';
+  ids.forEach(id=>{
+    const st=STICKERS[id],arr=gr[id],r=RARITY[st.rarity];
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:10px;cursor:pointer';
+    row.innerHTML=`<div style="font-size:24px;width:32px;text-align:center">${st.icon}</div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:800">${st.name}</div>
+      <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:${r.color};margin-top:2px">${r.name}</div></div>
+      <div style="font-size:12px;font-weight:800;color:var(--gold)">+${st.bonus}</div>
+      <div style="font-size:11px;color:var(--dim);font-weight:700;background:var(--bg);padding:2px 7px;border-radius:5px">×${arr.length}</div>`;
+    row.onclick=()=>{
+      const s=arr[0];v.stickers.push(s.uid);
+      S.stickers=S.stickers.filter(x=>x.uid!==s.uid);
+      S.stats.stickersUsed=(S.stats.stickersUsed||0)+1;
+      checkMissions();save();ov.classList.remove('on');renderVape();renderInv();
+      toast('Наклеено','good');
+    };
+    list.appendChild(row);
+  });
+  modal.appendChild(list);
+  const close=document.createElement('button');close.className='btn ghost full';close.style.marginTop='12px';close.textContent='Закрыть';
+  close.onclick=()=>ov.classList.remove('on');
+  modal.appendChild(close);
+  box.innerHTML='';box.appendChild(modal);
+}
+
+/* ==========================================================
+   SHARE
+========================================================== */
+function openShare(v){
+  const model=MODELS[v.modelId],r=RARITY[model.rarity],variant=getVariant(v);
+  const price=computePrice(v);
+  const ov=$('ov'),box=$('ovContent');if(!ov||!box)return;ov.classList.add('on');
+  const modal=document.createElement('div');
+  modal.style.cssText='display:flex;flex-direction:column;gap:12px;align-items:center;width:100%;max-width:380px';
+  const card=document.createElement('div');
+  card.style.cssText=`background:linear-gradient(160deg,var(--panel),#0e0819);border:1.5px solid ${r.color}66;border-radius:20px;padding:26px;width:100%;text-align:center;position:relative;overflow:hidden`;
+  card.innerHTML=`<div style="position:absolute;top:-40%;left:50%;transform:translateX(-50%);width:180%;height:80%;background:radial-gradient(ellipse,${r.color}33,transparent 60%);pointer-events:none"></div>
+    <div style="position:relative;font-size:10px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:12px">◆ PODDROP</div>
+    <div id="shareCvSlot" style="display:flex;justify-content:center;position:relative"></div>
+    <div style="position:relative;font-size:20px;font-weight:900;margin:8px 0 2px">${model.name}</div>
+    <div style="position:relative;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:${r.color}">${r.name}</div>
+    <div style="position:relative;font-size:11px;font-family:ui-monospace,monospace;color:var(--dim);margin:4px 0 12px">#${String(v.serial).padStart(4,'0')} · ${variant.name} · ${v.flavor}</div>
+    <div style="position:relative;display:flex;align-items:center;justify-content:center;gap:8px;font-size:32px;font-weight:900;color:var(--gold);font-variant-numeric:tabular-nums;letter-spacing:-1px;margin:14px 0 2px">
+      <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fed7aa,var(--gold) 60%,#c2410c);color:#451a03;font-size:14px;font-weight:900">П</span>${fmt(price)}
+    </div>
+    <div style="position:relative;font-size:9.5px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px">Цена вейпа</div>
+    <div style="position:relative;display:grid;grid-template-columns:1fr 1fr;gap:6px">
+      <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:8px 6px">
+        <div style="font-size:14px;font-weight:800;font-variant-numeric:tabular-nums">${v.battery}</div>
+        <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-top:2px">мАч</div>
+      </div>
+      <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:8px 6px">
+        <div style="font-size:14px;font-weight:800;font-variant-numeric:tabular-nums">${v.puffs}</div>
+        <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-top:2px">затяжек</div>
+      </div>
+    </div>`;
+  modal.appendChild(card);
+  card.querySelector('#shareCvSlot').appendChild(spriteEl({sprite:model.sprite,palette:getPalette(v)},110,160));
+  const actions=document.createElement('div');actions.style.cssText='display:flex;gap:8px';
+  const copyBtn=document.createElement('button');copyBtn.className='btn';copyBtn.textContent='📋 Скопировать';
+  copyBtn.onclick=()=>{
+    const txt=`Мой вейп в PodDrop\n\n${model.name} (${r.name})\n#${String(v.serial).padStart(4,'0')} · ${variant.name}\nБатарея: ${v.battery} мАч\nВкус: ${v.flavor}\nЗатяжек: ${v.puffs}\nЦена: ${fmt(price)} П`;
+    navigator.clipboard.writeText(txt).then(()=>toast('Скопировано','good')).catch(()=>toast('Не удалось','bad'));
+  };
+  actions.appendChild(copyBtn);
+  const closeBtn=document.createElement('button');closeBtn.className='btn ghost';closeBtn.textContent='Закрыть';
+  closeBtn.onclick=()=>ov.classList.remove('on');
+  actions.appendChild(closeBtn);
+  modal.appendChild(actions);
+  box.innerHTML='';box.appendChild(modal);
+}
+
+/* ==========================================================
+   UPGRADE
+========================================================== */
+let upSrcs=[],upTgt=null,upSpin=false;
+function renderUp(){
+  const slots=$('upSlots');if(!slots)return;slots.innerHTML='';
+  for(let i=0;i<5;i++){
+    const slot=document.createElement('div');
+    const uid=upSrcs[i];
+    if(uid){
+      const v=S.inventory.find(x=>x.uid===uid);
+      slot.className='up-slot filled';
+      if(v)slot.appendChild(spriteEl({sprite:MODELS[v.modelId].sprite,palette:getPalette(v)},36,48));
+      const x=document.createElement('span');x.className='x';x.textContent='✕';
+      x.onclick=(e)=>{e.stopPropagation();upSrcs=upSrcs.filter(u=>u!==uid);renderUp();updChance();};
+      slot.appendChild(x);
+    } else {slot.className='up-slot';slot.textContent='+';}
+    slots.appendChild(slot);
+  }
+  $('upCount').textContent=upSrcs.length+'/5';
+  const sum=upSrcs.reduce((s,uid)=>{const v=S.inventory.find(x=>x.uid===uid);return s+(v?computePrice(v):0);},0);
+  $('upSum').textContent=fmt(sum);
+  const sl=$('srcList');if(!sl)return;sl.innerHTML='';
+  const sorted=[...S.inventory].sort((a,b)=>computePrice(a)-computePrice(b));
+  if(!sorted.length)sl.innerHTML='<div style="color:var(--dim2);font-size:12px;padding:12px 0;text-align:center">Пусто</div>';
+  sorted.forEach(v=>{
+    if(upSrcs.includes(v.uid))return;
+    const model=MODELS[v.modelId];
+    const el=document.createElement('div');el.className='pick';
+    el.appendChild(spriteEl({sprite:model.sprite,palette:getPalette(v)},20,30));
+    const t=document.createElement('div');t.className='txt';
+    const nm=document.createElement('div');nm.className='nm';nm.textContent=model.name;
+    const vl=document.createElement('div');vl.className='vl';vl.textContent=fmt(computePrice(v))+' П';
+    t.append(nm,vl);el.appendChild(t);
+    el.onclick=()=>{if(upSrcs.length>=5){toast('Максимум 5','bad');return;}upSrcs.push(v.uid);renderUp();updChance();sndClick();};
+    sl.appendChild(el);
+  });
+  const tl=$('tgtList');if(!tl)return;tl.innerHTML='';
+  const tgts=Object.entries(MODELS).filter(([id,it])=>
+    !it.custom && id!=='xros_tester' && RARITY[it.rarity].base>sum
+  ).sort((a,b)=>RARITY[a[1].rarity].base-RARITY[b[1].rarity].base);
+  if(!upSrcs.length)tl.innerHTML='<div style="color:var(--dim2);font-size:12px;padding:12px 0;text-align:center">Сначала выбери источники</div>';
+  else if(!tgts.length)tl.innerHTML='<div style="color:var(--dim2);font-size:12px;padding:12px 0;text-align:center">Нечего улучшать</div>';
+  else tgts.forEach(([id,m])=>{
+    const el=document.createElement('div');el.className='pick';
+    if(upTgt===id)el.classList.add('sel');
+    el.appendChild(spriteEl({sprite:m.sprite,palette:m.palette},20,30));
+    const t=document.createElement('div');t.className='txt';
+    const nm=document.createElement('div');nm.className='nm';nm.textContent=m.name;
+    const vl=document.createElement('div');vl.className='vl';vl.textContent=fmt(RARITY[m.rarity].base)+' П';
+    t.append(nm,vl);el.appendChild(t);
+    el.onclick=()=>{upTgt=id;renderUp();updChance();sndClick();};
+    tl.appendChild(el);
+  });
+}
+function calcChance(sp,tp){if(tp<=sp)return 0;const ratio=tp/sp;let c=60/Math.pow(ratio,.8);
+  return Math.round(Math.min(60,Math.max(1,c))*10)/10;}
+function updChance(){
+  const wheel=$('wheel');if(!wheel)return;
+  const pct=$('chancePct'),sub=$('chanceSub'),ok=$('lgOk'),bad=$('lgBad'),
+        info=$('ratioInfo'),btn=$('spinBtn');
+  if(!upSrcs.length||!upTgt){
+    pct.textContent='—';sub.textContent='выбери цель';ok.textContent='—';bad.textContent='—';
+    wheel.style.background=`conic-gradient(#3a2f55 0deg 360deg)`;
+    info.textContent='—';btn.disabled=true;return;
+  }
+  const sum=upSrcs.reduce((s,uid)=>{const v=S.inventory.find(x=>x.uid===uid);return s+(v?computePrice(v):0);},0);
+  const tp=RARITY[MODELS[upTgt].rarity].base;
+  const ch=calcChance(sum,tp),gd=ch*3.6;
+  wheel.style.transition='none';wheel.style.transform='rotate(0deg)';
+  wheel.style.background=`conic-gradient(var(--accent) 0deg ${gd}deg,var(--red) ${gd}deg 360deg)`;
+  pct.textContent=ch+'%';sub.textContent=ch>=40?'хороший шанс':ch>=20?'средний шанс':'риск';
+  ok.textContent=ch+'%';bad.textContent=(Math.round((100-ch)*10)/10)+'%';
+  info.textContent=`${fmt(sum)} П → ${fmt(tp)} П · ×${(tp/sum).toFixed(2)}`;
+  btn.disabled=upSpin;
+}
+function spinUp(){
+  if(!upSrcs.length||!upTgt||upSpin)return;
+  const srcVapes=upSrcs.map(uid=>S.inventory.find(x=>x.uid===uid)).filter(Boolean);
+  if(!srcVapes.length)return;
+  const sum=srcVapes.reduce((s,v)=>s+computePrice(v),0);
+  const tp=RARITY[MODELS[upTgt].rarity].base;
+  const ch=calcChance(sum,tp),gd=ch*3.6,succ=Math.random()*100<ch;
+  let r;
+  if(succ){const lo=360-gd;r=lo+(360-lo)*.1+Math.random()*((360-lo)*.8);}
+  else{const z=360-gd;r=z*.1+Math.random()*(z*.8);}
+  const turns=6+Math.floor(Math.random()*2);
+  upSpin=true;$('spinBtn').disabled=true;
+  tone({freq:330,dur:.5,vol:.03,type:'triangle'});
+  const wheel=$('wheel');
+  wheel.style.transition='transform 4.2s cubic-bezier(.15,.85,.2,1)';
+  void wheel.offsetWidth;
+  wheel.style.transform=`rotate(${turns*360+r}deg)`;
+  setTimeout(()=>{
+    upSpin=false;wheel.style.transition='none';
+    S.inventory=S.inventory.filter(v=>!upSrcs.includes(v.uid));
+    if(S.currentVapeUid&&upSrcs.includes(S.currentVapeUid))S.currentVapeUid=null;
+    if(succ){
+      const base=srcVapes[0];
+      const nv=createVape(upTgt);
+      nv.variantId=base.variantId;nv.battery=base.battery;nv.flavor=base.flavor;
+      S.inventory.push(nv);
+      S.stats.upWins++;
+      const rar=MODELS[upTgt].rarity;
+      if(rar==='epic')S.stats.epicGot++;
+      if(rar==='legendary')S.stats.legGot++;
+      if(rar==='mythic')S.stats.mythicGot++;
+      addXP(RARITY[rar].xp);
+      toast('✨ Успех! '+MODELS[upTgt].name,'good');sndLegend();
+    } else {
+      toast('Провал — сгорело','bad');sndLose();
+    }
+    upSrcs=[];upTgt=null;
+    checkMissions();checkAch();
+    renderInv();renderCases();renderUp();updChance();renderVape();save();
+  },4400);
+}
+
+/* ==========================================================
+   MISSIONS
+========================================================== */
+function checkMissions(){
+  MISSIONS.forEach(m=>{
+    if(S.missions[m.id])return;
+    if((S.stats[m.stat]||0)>=m.need){
+      S.missions[m.id]=true;S.balance+=m.reward;
+      toast(`✔ ${m.name} +${fmt(m.reward)} П`,'good');
+      try{tone({freq:1046,dur:.4,vol:.04});}catch(e){}
+    }
+  });
+  updateHeader();renderMissions();
+}
+function renderMissions(){
+  const box=$('missionsBox');if(!box)return;box.innerHTML='';
+  MISSIONS.forEach(m=>{
+    const cur=Math.min(S.stats[m.stat]||0,m.need),done=!!S.missions[m.id];
+    const el=document.createElement('div');el.className='mission'+(done?' done':'');
+    const ico=document.createElement('div');ico.className='m-ico';ico.textContent=done?'✓':'◇';
+    const body=document.createElement('div');body.className='m-body';
+    const nm=document.createElement('div');nm.className='m-name';nm.textContent=m.name;
+    const pr=document.createElement('div');pr.className='m-prog';pr.textContent=`${cur} / ${m.need}`;
+    const bar=document.createElement('div');bar.className='m-bar';
+    const fill=document.createElement('div');fill.className='m-fill';fill.style.width=(cur/m.need*100)+'%';
+    bar.appendChild(fill);body.append(nm,pr,bar);
+    const rw=document.createElement('div');rw.className='m-reward';rw.textContent='+'+fmt(m.reward)+' П';
+    el.append(ico,body,rw);box.appendChild(el);
+  });
+}
+function renderAch(){
+  const box=$('achBox');if(!box)return;box.innerHTML='';
+  ACHIEVEMENTS.forEach(a=>{
+    const on=!!S.achievements[a.id];
+    const el=document.createElement('div');el.className='ach'+(on?' on':'');
+    const i=document.createElement('div');i.className='a-icon a-i';i.textContent=a.icon;
+    const n=document.createElement('div');n.className='a-n';n.textContent=a.name;
+    el.append(i,n);box.appendChild(el);
+  });
+}
+
+/* ==========================================================
+   DAILY
+========================================================== */
+const DAILY_MS=24*60*60*1000;
+function checkDaily(){
+  const now=Date.now(),diff=now-S.lastDaily,cd=$('dailyCd');if(!cd)return;
+  if(diff>=DAILY_MS){
+    cd.innerHTML='· <b style="color:var(--accent2);cursor:pointer" id="dBtn">Ежедневный бонус</b>';
+    $('dBtn').onclick=()=>{
+      S.lastDaily=Date.now();
+      const b=500+S.level*100;S.balance+=b;
+      toast('🎁 +'+fmt(b)+' П','good');sndWin();
+      updateHeader();save();checkDaily();
+    };
+  } else {
+    const left=DAILY_MS-diff,h=Math.floor(left/3600000),m=Math.floor(left%3600000/60000);
+    cd.innerHTML=`· <span style="color:var(--dim)">через ${h}ч ${m}м</span>`;
+  }
+}
+
+/* ==========================================================
+   CODES
+========================================================== */
+function validateGameCode(raw){
+  const input=raw.trim().toUpperCase();
+  const checks=[];
+  const re=/^POD-[A-Z0-9]+-[A-Z0-9]{12}$/;
+  checks.push({ok:re.test(input)});
+  checks.push({ok:input.startsWith('POD-')});
+  checks.push({ok:/^[A-Z0-9-]+$/.test(input)});
+  const parts=input.split('-');
+  const structOk=parts.length===3&&parts[0]==='POD'&&parts[2].length===12;
+  checks.push({ok:structOk});
+  if(!re.test(input)||!structOk)return{ok:false,checks,err:'Неверный формат'};
+  const[,payload,sig]=parts;
+  const sigOk=makeSig(payload)===sig;
+  checks.push({ok:sigOk});
+  if(!sigOk)return{ok:false,checks,err:'Подпись не совпадает'};
+  const bytes=b32ToBytes(payload);
+  if(!bytes||bytes.length<2)return{ok:false,checks,err:'Ошибка декодирования'};
+  const type=bytes[0];
+  checks.push({ok:true});
+  if(type===0){
+    const idx=bytes[1],id=MODEL_ORDER[idx];
+    if(!id||!MODELS[id])return{ok:false,checks,err:'Модель не найдена'};
+    return{ok:true,checks,type:'registry',modelId:id};
+  }
+  if(type===1){
+    const nameLen=bytes[1];
+    if(bytes.length<2+nameLen+5)return{ok:false,checks,err:'Повреждено'};
+    const name=new TextDecoder().decode(new Uint8Array(bytes.slice(2,2+nameLen)));
+    const rarityIdx=bytes[2+nameLen],spriteIdx=bytes[3+nameLen],variantId=bytes[4+nameLen];
+    const battery=(bytes[5+nameLen]<<8)|bytes[6+nameLen];
+    const flavorIdx=bytes[7+nameLen];
+    const validR=RARITY_LIST[rarityIdx],validS=SPRITE_LIST[spriteIdx],validF=FLAVORS[flavorIdx];
+    const dataOk=!!validR&&!!validS&&!!validF&&[900,1200,1500,2000].includes(battery)&&variantId<VARIANTS.length;
+    if(!dataOk)return{ok:false,checks,err:'Некорректные параметры'};
+    return{ok:true,checks,type:'custom',spec:{name,rarity:validR,sprite:validS,variantId,battery,flavor:validF}};
+  }
+  return{ok:false,checks,err:'Неизвестный тип'};
+}
+function renderChecks(cs){
+  document.querySelectorAll('#checks .check').forEach((el,i)=>{
+    el.className='check';el.querySelector('.ico').textContent='·';
+    if(cs[i]){el.className='check '+(cs[i].ok?'ok':'bad');
+      el.querySelector('.ico').textContent=cs[i].ok?'✓':'✕';}
+  });
+}
+function ensureCustomModel(spec){
+  const h=hashMulti(spec.name+'|'+spec.rarity+'|'+spec.sprite+'|'+spec.variantId,2);
+  const id='custom_'+h[0].toString(16)+h[1].toString(16);
+  if(!MODELS[id]){
+    const variant=VARIANTS[spec.variantId]||VARIANTS[0];
+    MODELS[id]={name:spec.name,rarity:spec.rarity,sprite:spec.sprite,
+      palette:variant.main?pal(variant.main,variant.accent):pal('#4b5563','#9ca3af'),custom:true};
+  }
+  return id;
+}
+
+/* ==========================================================
+   TOPUP
+========================================================== */
+const RATE=10,TTL_MS=3*60*60*1000;
+function generateReq(rub){
+  const nonce=[];for(let i=0;i<4;i++)nonce.push(Math.floor(Math.random()*256));
+  const ts=Date.now()/1000|0;
+  const bytes=[2,(rub>>8)&0xff,rub&0xff,...nonce,(ts>>>24)&0xff,(ts>>>16)&0xff,(ts>>>8)&0xff,ts&0xff];
+  const payload=bytesToB32(bytes);
+  return {code:`REQ-${payload}-${makeSig(payload)}`,nonce,ts,rub};
+}
+function decodeTopup(input){
+  const parts=input.trim().toUpperCase().split('-');
+  if(parts.length!==3||parts[0]!=='TOPUP')return null;
+  const[,payload,sig]=parts;
+  if(makeSig(payload)!==sig)return{err:'Подпись не совпадает'};
+  const bytes=b32ToBytes(payload);
+  if(!bytes||bytes.length<15)return{err:'Повреждённые данные'};
+  if(bytes[0]!==3)return{err:'Это не TOPUP-код'};
+  const rub=(bytes[1]<<8)|bytes[2];
+  const nonce=[bytes[3],bytes[4],bytes[5],bytes[6]];
+  const tsReq=((bytes[7]<<24)|(bytes[8]<<16)|(bytes[9]<<8)|bytes[10])>>>0;
+  const tsNow=((bytes[11]<<24)|(bytes[12]<<16)|(bytes[13]<<8)|bytes[14])>>>0;
+  return{rub,nonce,tsReq,tsNow};
+}
+
+/* ==========================================================
+   TABS
+========================================================== */
+let currentTab='vCases';
+function switchTab(t){
+  currentTab=t;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  const view=$(t);if(view)view.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(b=>{
+    b.classList.toggle('active',b.dataset.tab===t);
+  });
+  if(t==='vInv')renderInv();
+  if(t==='vVape')renderVape();
+  if(t==='vUp')renderUp();
+  if(t==='vTasks'){renderMissions();renderAch();}
+  sndClick();
+}
+document.querySelectorAll('.nav-item').forEach(b=>{
+  b.onclick=()=>switchTab(b.dataset.tab);
+});
+document.querySelectorAll('.menu-card[data-go]').forEach(c=>{
+  c.onclick=()=>switchTab(c.dataset.go);
+});
+
+/* ==========================================================
+   REGEN
+========================================================== */
+setInterval(()=>{
+  if(currentTab!=='vVape')return;
+  if(S.energy>=100)return;
+  S.energy=Math.min(100,S.energy+1);
+  const eF=$('energyFill'),eT=$('energyTxt');
+  if(eF){eF.style.width=S.energy+'%';eT.textContent=Math.round(S.energy)+'%';}
+},1500);
+setInterval(()=>{
+  const now=Date.now();
+  if(now-(S.lastPuffAt||0)<3000)return;
+  const v=S.inventory.find(x=>x.uid===S.currentVapeUid);
+  if(!v||v.overheat<=0)return;
+  v.overheat=Math.max(0,v.overheat-1);
+  if(currentTab==='vVape'){
+    const oF=$('ohFill'),oT=$('ohTxt'),oL=$('ohLbl');
+    if(oF){const p=Math.min(100,(v.overheat/30)*100);oF.style.width=p+'%';oT.textContent=v.overheat+'/30';
+      oL.classList.toggle('hot',v.overheat>10);oL.classList.toggle('warn-pulse',v.overheat>=15);}
+  }
+},2000);
+
+/* ==========================================================
+   BIND
+========================================================== */
+$('sellAllBtn').onclick=sellAll;
+$('spinBtn').onclick=spinUp;
+
+const inp=$('codeInput');
+if(inp)inp.addEventListener('input',()=>{const v=inp.value.toUpperCase().replace(/[^A-Z0-9-]/g,'');if(v!==inp.value)inp.value=v;});
+$('redeemBtn').onclick=()=>{
+  const raw=inp.value;
+  if(!raw.trim()){toast('Введи код','bad');return;}
+  const res=validateGameCode(raw);renderChecks(res.checks);
+  if(!res.ok){toast('❌ '+res.err,'bad');return;}
+  let v;
+  if(res.type==='registry'){v=createVape(res.modelId);}
+  else{
+    const modelId=ensureCustomModel(res.spec);
+    v=createVape(modelId);
+    v.variantId=res.spec.variantId;v.battery=res.spec.battery;v.flavor=res.spec.flavor;
+  }
+  S.inventory.unshift(v);
+  const model=MODELS[v.modelId];
+  if(model.rarity==='exclusive'){S.stats.exclusiveGot++;if(!S.achievements.exclusive){S.achievements.exclusive=true;unlockToast('🔥','Эксклюзив');}}
+  if(model.rarity==='mythic')S.stats.mythicGot++;
+  if(model.rarity==='epic')S.stats.epicGot++;
+  if(model.rarity==='legendary')S.stats.legGot++;
+  addXP(RARITY[model.rarity].xp);
+  checkMissions();checkAch();renderInv();
+  inp.value='';
+  currentCase=null;
+  const ov=$('ov'),box=$('ovContent');
+  box.innerHTML=`<div style="width:100%;display:flex;justify-content:center;align-items:center;min-height:50vh">
+    <div id="resultSlot" style="width:100%;display:flex;justify-content:center"></div></div>`;
+  ov.classList.add('on');
+  showResult({type:'vape',vape:v},'novice');
+  save();
+};
+
+$('tabGame').onclick=()=>{$('tabGame').classList.add('active');$('tabTopup').classList.remove('active');
+  $('paneGame').style.display='';$('paneTopup').style.display='none';sndClick();};
+$('tabTopup').onclick=()=>{$('tabTopup').classList.add('active');$('tabGame').classList.remove('active');
+  $('paneTopup').style.display='';$('paneGame').style.display='none';sndClick();};
+
+document.querySelectorAll('[data-rub]').forEach(el=>{
+  el.onclick=()=>{
+    const rub=parseInt(el.dataset.rub);
+    const req=generateReq(rub);
+    $('reqCode').textContent=req.code;
+    $('reqOut').style.display='block';
+    $('customRub').value='';
+    sndClick();toast('REQ-код создан','good');
+  };
+});
+$('makeReqBtn').onclick=()=>{
+  const rub=parseInt($('customRub').value);
+  if(!rub||rub<50||rub>100000){toast('От 50 до 100000 ₽','bad');return;}
+  const req=generateReq(rub);
+  $('reqCode').textContent=req.code;
+  $('reqOut').style.display='block';
+  sndClick();toast('REQ-код создан','good');
+};
+$('copyReqBtn').onclick=()=>{
+  const t=$('reqCode').textContent;
+  navigator.clipboard.writeText(t).then(()=>toast('Скопировано','good')).catch(()=>toast('Не удалось','bad'));
+};
+$('activateBtn').onclick=()=>{
+  const raw=$('topupInput').value;
+  const status=$('topupStatus');
+  if(!raw.trim()){toast('Введи код','bad');return;}
+  const res=decodeTopup(raw);
+  if(!res||res.err){
+    status.className='status bad on';
+    status.innerHTML='<div class="ico">✕</div><div>'+(res?.err||'Ошибка')+'</div>';
+    sndLose();return;
+  }
+  const nonceKey=res.nonce.join(',');
+  if(S.usedReq.includes(nonceKey)){
+    status.className='status bad on';
+    status.innerHTML='<div class="ico">✕</div><div>Этот REQ уже был активирован</div>';return;
+  }
+  if((Date.now()/1000|0)-res.tsReq>TTL_MS/1000){
+    status.className='status bad on';
+    status.innerHTML='<div class="ico">✕</div><div>Код просрочен (3 часа)</div>';return;
+  }
+  if(S.usedTopup.includes(nonceKey)){
+    status.className='status bad on';
+    status.innerHTML='<div class="ico">✕</div><div>Этот TOPUP уже активирован</div>';return;
+  }
+  const coins=res.rub*RATE;
+  S.balance+=coins;
+  S.usedReq.push(nonceKey);S.usedTopup.push(nonceKey);
+  S.history.unshift({rub:res.rub,coins,ts:Date.now()});
+  if(S.history.length>20)S.history.pop();
+  updateHeader();
+  status.className='status ok on';
+  status.innerHTML=`<div class="ico">✓</div><div>Донат успешен! +${fmt(coins)} П (${res.rub} ₽)</div>`;
+  $('topupInput').value='';
+  sndWin();save();
+};
+
+/* ==========================================================
+   INIT
+========================================================== */
+updateHeader();
+renderCases();
+renderInv();
+renderVape();
+renderMissions();
+renderAch();
+renderUp();
+updChance();
+checkDaily();
+setInterval(checkDaily,60000);
+
+if(S.stats.casesOpened===0){
+  setTimeout(()=>toast('Открой первый кейс за 100 П','good'),1200);
+}
+</script>
+</body>
+</html>
